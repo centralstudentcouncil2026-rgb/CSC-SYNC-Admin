@@ -4336,7 +4336,27 @@ body.admin-tab-page-open .calendar-panel {
     font-size: 20px;
   }
 }
+/* Fix Announcements / Accounts full-page tab header gap and corner */
+.admin-tab-page,
+.admin-tab-page .modal-card {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+  width: 100vw !important;
+}
 
+.admin-tab-page .modal-card {
+  overflow: hidden !important;
+}
+
+.admin-tab-page .modal-header {
+  border-radius: 0 0 22px 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
   </style>
   <style>
     body.admin-dashboard-shell .org-announcement-preview,
