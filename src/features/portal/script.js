@@ -3514,7 +3514,12 @@ function restoreDashboardAreaAfterReload() {
     usersModal: openUsers,
     activityLogModal: openActivityLog
   };
-  window.setTimeout(() => openers[id]?.(), 0);
+  window.setTimeout(() => {
+    openers[id]?.();
+    if (id === 'eventRequestsModal') {
+      [80, 300, 900].forEach((delay) => window.setTimeout(renderEventRequests, delay));
+    }
+  }, 0);
 }
 
 function requestPersonalCalendarReloadRestore(attempt = 0) {
