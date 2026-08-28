@@ -33,6 +33,7 @@
   let searchRefreshTimer = 0;
   let heightSyncFrame = 0;
   let heightSyncTimer = 0;
+  let personalCalendar = null;
 
   function session() {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
@@ -160,38 +161,40 @@
       body.admin-dashboard-shell .personal-calendar-section .section-label{align-items:center!important;background:transparent!important;border:0!important;color:#334155!important;display:flex!important;font-size:clamp(11px,2.8vw,13px)!important;font-weight:900!important;letter-spacing:0!important;line-height:1.16!important;margin:0!important;min-height:0!important;overflow:hidden!important;padding:0!important;text-overflow:ellipsis!important;text-transform:uppercase!important;white-space:nowrap!important;}
       @media (max-width:760px){body.admin-dashboard-shell .personal-calendar-section{border-radius:13px!important;gap:10px!important;padding:12px!important;}body.admin-dashboard-shell .personal-calendar-section #personalCalendarButton{border-radius:16px!important;min-height:44px!important;padding:9px 10px!important;}}
       #personalCalendarHost{display:none!important;}
-      body.personal-calendar-perspective #calendar{display:block!important;}
+      body.personal-calendar-perspective #calendar{display:none!important;}
+      body.personal-calendar-perspective #personalCalendarHost{display:block!important;}
+      body.personal-calendar-perspective #personalCalendarHost{display:block!important;}
       body.personal-calendar-perspective .calendar-panel{min-height:0!important;padding:16px!important;}
-      body.personal-calendar-perspective #calendar{flex:0 0 auto!important;height:var(--personal-calendar-height,520px)!important;min-height:0!important;margin-bottom:0!important;border:1.5px solid rgba(100,116,139,.34)!important;background:rgba(255,255,255,.76)!important;}
-      body.personal-calendar-perspective #calendar .fc,
-      body.personal-calendar-perspective #calendar .fc-view-harness,
-      body.personal-calendar-perspective #calendar .fc-view-harness-active{height:100%!important;min-height:0!important;}
-      body.personal-calendar-perspective #calendar .fc-scrollgrid,
-      body.personal-calendar-perspective #calendar .fc-scrollgrid table,
-      body.personal-calendar-perspective #calendar .fc-daygrid-body,
-      body.personal-calendar-perspective #calendar .fc-daygrid-body table,
-      body.personal-calendar-perspective #calendar .fc-daygrid-body-balanced,
-      body.personal-calendar-perspective #calendar .fc-daygrid-body-unbalanced{width:100%!important;height:100%!important;}
-      body.personal-calendar-perspective #calendar .fc-scrollgrid,
-      body.personal-calendar-perspective #calendar .fc-theme-standard td,
-      body.personal-calendar-perspective #calendar .fc-theme-standard th,
-      body.personal-calendar-perspective #calendar .fc-scrollgrid td,
-      body.personal-calendar-perspective #calendar .fc-scrollgrid th{border-color:rgba(100,116,139,.34)!important;border-style:solid!important;}
-      body.personal-calendar-perspective #calendar .fc-daygrid-day-frame{min-height:0!important;background:rgba(255,255,255,.44)!important;}
-      body.personal-calendar-perspective #calendar .fc-daygrid-day-number{display:block!important;color:#0f172a!important;font-weight:700!important;}
-      body.personal-calendar-perspective #calendar .event-month-occurrence .fc-event-main,
-      body.personal-calendar-perspective #calendar .gcal-month-event .fc-event-main,
-      body.personal-calendar-perspective #calendar .event-month-occurrence .fc-event-main-frame,
-      body.personal-calendar-perspective #calendar .gcal-month-event .fc-event-main-frame{align-items:center!important;color:#fff!important;display:flex!important;min-width:0!important;overflow:hidden!important;}
-      body.personal-calendar-perspective #calendar .event-month-occurrence .fc-event-time,
-      body.personal-calendar-perspective #calendar .event-month-occurrence .fc-event-title,
-      body.personal-calendar-perspective #calendar .gcal-month-event .fc-event-time,
-      body.personal-calendar-perspective #calendar .gcal-month-event .fc-event-title,
-      body.personal-calendar-perspective #calendar .personal-calendar-event-time,
-      body.personal-calendar-perspective #calendar .personal-calendar-event-title{color:#fff!important;display:inline!important;font-size:11px!important;font-weight:800!important;line-height:1.15!important;min-width:0!important;opacity:1!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
-      body.personal-calendar-perspective #calendar .event-month-occurrence .fc-event-title-container,
-      body.personal-calendar-perspective #calendar .gcal-month-event .fc-event-title-container,
-      body.personal-calendar-perspective #calendar .personal-calendar-event-content{display:flex!important;gap:4px!important;min-width:0!important;overflow:hidden!important;}
+      body.personal-calendar-perspective #personalCalendarHost{flex:0 0 auto!important;height:var(--personal-calendar-height,520px)!important;min-height:0!important;margin-bottom:0!important;border:1.5px solid rgba(100,116,139,.34)!important;background:rgba(255,255,255,.76)!important;}
+      body.personal-calendar-perspective #personalCalendarHost .fc,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness-active{height:100%!important;min-height:0!important;}
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body-balanced,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body-unbalanced{width:100%!important;height:100%!important;}
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid,
+      body.personal-calendar-perspective #personalCalendarHost .fc-theme-standard td,
+      body.personal-calendar-perspective #personalCalendarHost .fc-theme-standard th,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid td,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid th{border-color:rgba(100,116,139,.34)!important;border-style:solid!important;}
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-frame{min-height:0!important;background:rgba(255,255,255,.44)!important;}
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-number{display:block!important;color:#0f172a!important;font-weight:700!important;}
+      body.personal-calendar-perspective #personalCalendarHost .event-month-occurrence .fc-event-main,
+      body.personal-calendar-perspective #personalCalendarHost .gcal-month-event .fc-event-main,
+      body.personal-calendar-perspective #personalCalendarHost .event-month-occurrence .fc-event-main-frame,
+      body.personal-calendar-perspective #personalCalendarHost .gcal-month-event .fc-event-main-frame{align-items:center!important;color:#fff!important;display:flex!important;min-width:0!important;overflow:hidden!important;}
+      body.personal-calendar-perspective #personalCalendarHost .event-month-occurrence .fc-event-time,
+      body.personal-calendar-perspective #personalCalendarHost .event-month-occurrence .fc-event-title,
+      body.personal-calendar-perspective #personalCalendarHost .gcal-month-event .fc-event-time,
+      body.personal-calendar-perspective #personalCalendarHost .gcal-month-event .fc-event-title,
+      body.personal-calendar-perspective #personalCalendarHost .personal-calendar-event-time,
+      body.personal-calendar-perspective #personalCalendarHost .personal-calendar-event-title{color:#fff!important;display:inline!important;font-size:11px!important;font-weight:800!important;line-height:1.15!important;min-width:0!important;opacity:1!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
+      body.personal-calendar-perspective #personalCalendarHost .event-month-occurrence .fc-event-title-container,
+      body.personal-calendar-perspective #personalCalendarHost .gcal-month-event .fc-event-title-container,
+      body.personal-calendar-perspective #personalCalendarHost .personal-calendar-event-content{display:flex!important;gap:4px!important;min-width:0!important;overflow:hidden!important;}
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventEntryType),
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventScheduleType),
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventCategory),
@@ -252,7 +255,7 @@
       .personal-calendar-card p{margin:0;color:#475569;line-height:1.4;overflow-wrap:anywhere;}
       @media (max-width: 900px){
         body.personal-calendar-perspective .calendar-panel{padding:10px!important;}
-        body.personal-calendar-perspective #calendar{height:var(--personal-calendar-height,460px)!important;min-height:0!important;}
+        body.personal-calendar-perspective #personalCalendarHost{height:var(--personal-calendar-height,460px)!important;min-height:0!important;}
         body.personal-calendar-perspective .topbar{align-items:stretch!important;flex-wrap:wrap!important;}
         body.personal-calendar-perspective .brand-area{flex:1 1 280px!important;}
         body.personal-calendar-perspective .calendar-nav{flex:1 1 100%!important;flex-wrap:nowrap!important;justify-content:flex-start!important;}
@@ -261,7 +264,7 @@
       }
       @media (max-width: 640px){
         body.personal-calendar-perspective .calendar-panel{padding:8px!important;}
-        body.personal-calendar-perspective #calendar{height:var(--personal-calendar-height,360px)!important;min-height:0!important;}
+        body.personal-calendar-perspective #personalCalendarHost{height:var(--personal-calendar-height,360px)!important;min-height:0!important;}
         body.personal-calendar-perspective #mobileMenuButton{height:40px!important;min-height:40px!important;min-width:40px!important;width:40px!important;}
         body.personal-calendar-perspective .brand-logo{height:42px!important;width:42px!important;}
         body.personal-calendar-perspective .brand-copy h1{font-size:clamp(1rem,5vw,1.35rem)!important;}
@@ -277,10 +280,10 @@
         body.personal-calendar-perspective #notificationsButton{justify-content:center!important;min-width:48px!important;padding:0 8px!important;width:auto!important;}
         body.personal-calendar-perspective.personal-search-expanded #personalCalendarHeaderSearch{box-shadow:0 16px 34px rgba(15,23,42,.22)!important;caret-color:auto!important;color:#0f172a!important;cursor:text!important;left:0!important;max-width:none!important;min-width:0!important;position:absolute!important;right:0!important;text-align:left!important;top:0!important;width:100%!important;z-index:20!important;}
         body.personal-calendar-perspective.personal-search-expanded #personalCalendarHeaderSearch::placeholder{text-align:left!important;}
-        body.personal-calendar-perspective #calendar .fc-col-header-cell-cushion{font-size:.74rem!important;padding:2px 1px!important;}
-        body.personal-calendar-perspective #calendar .fc-daygrid-day-number{font-size:.74rem!important;padding:2px 4px!important;}
-        body.personal-calendar-perspective #calendar .fc-daygrid-day-frame{padding:0!important;}
-        body.personal-calendar-perspective #calendar .fc-daygrid-event{font-size:.62rem!important;line-height:1.1!important;margin:0 1px!important;padding:0 2px!important;}
+        body.personal-calendar-perspective #personalCalendarHost .fc-col-header-cell-cushion{font-size:.74rem!important;padding:2px 1px!important;}
+        body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-number{font-size:.74rem!important;padding:2px 4px!important;}
+        body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-frame{padding:0!important;}
+        body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-event{font-size:.62rem!important;line-height:1.1!important;margin:0 1px!important;padding:0 2px!important;}
       }
       @media (max-width: 390px){
         body.personal-calendar-perspective .calendar-nav{gap:4px!important;}
@@ -398,11 +401,78 @@
   }
 
   function dashboardCalendar() {
+    return personalMode && personalCalendar ? personalCalendar : mainDashboardCalendar();
+  }
+
+  function mainDashboardCalendar() {
     return window.CONNECT_STATE?.calendar || null;
   }
 
   function dashboardStore() {
     return window.CONNECT_STATE?.store || window.CONNECT_BOOTSTRAP_STORE || null;
+  }
+
+  function ensurePersonalCalendarHost() {
+    let host = document.getElementById('personalCalendarHost');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'personalCalendarHost';
+      const mainCalendar = document.getElementById('calendar');
+      mainCalendar?.insertAdjacentElement('afterend', host);
+    }
+    return host;
+  }
+
+  function showPersonalCalendarHost() {
+    const host = ensurePersonalCalendarHost();
+    const mainCalendar = document.getElementById('calendar');
+    if (mainCalendar) mainCalendar.hidden = true;
+    if (host) host.hidden = false;
+  }
+
+  function hidePersonalCalendarHost() {
+    const host = document.getElementById('personalCalendarHost');
+    const mainCalendar = document.getElementById('calendar');
+    if (host) host.hidden = true;
+    if (mainCalendar) mainCalendar.hidden = false;
+    mainDashboardCalendar()?.updateSize?.();
+  }
+
+  function initPersonalCalendar() {
+    if (personalCalendar) return personalCalendar;
+    const host = ensurePersonalCalendarHost();
+    if (!window.FullCalendar || !host) {
+      window.setTimeout(initPersonalCalendar, 80);
+      return null;
+    }
+    personalCalendar = new FullCalendar.Calendar(host, {
+      initialView: 'dayGridMonth',
+      firstDay: 0,
+      height: '100%',
+      expandRows: true,
+      nowIndicator: true,
+      selectable: true,
+      editable: true,
+      eventResizableFromStart: true,
+      allDaySlot: false,
+      slotMinTime: '06:00:00',
+      slotMaxTime: '24:00:00',
+      scrollTime: '06:00:00',
+      headerToolbar: false,
+      events: calendarEvents,
+      eventContent: renderPersonalCalendarEventContent,
+      dateClick: (info) => openPersonalForm(null, personalCalendar?.view?.type === 'dayGridMonth' ? personalMonthOccurrenceRange(localDateInput(info?.date || info?.dateStr)) : String(info?.dateStr || '').slice(0, 10)),
+      select: (info) => {
+        openPersonalForm(null, personalRangeFromSelection(info));
+        personalCalendar?.unselect?.();
+      },
+      eventClick: openPersonalEventDetails,
+      eventDrop: (info) => void persistPersonalCalendarMove(info),
+      eventResize: (info) => void persistPersonalCalendarMove(info),
+      eventAllow: (_dropInfo, draggedEvent) => canMovePersonalCalendarEvent(draggedEvent)
+    });
+    personalCalendar.render();
+    return personalCalendar;
   }
 
   function saveMainEventsSnapshot() {
@@ -421,7 +491,7 @@
       store.categories = savedMainCategories;
       savedMainCategories = null;
     }
-    const calendar = dashboardCalendar();
+    const calendar = mainDashboardCalendar();
     calendar?.refetchEvents?.();
     calendar?.updateSize?.();
   }
@@ -546,7 +616,7 @@
 
   function syncPersonalCalendarHeight() {
     if (!personalMode) return;
-    const calendarEl = document.getElementById('calendar');
+    const calendarEl = document.getElementById('personalCalendarHost');
     if (!calendarEl) return;
     const top = calendarEl.getBoundingClientRect().top;
     const viewportHeight = Math.floor(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 640);
@@ -555,7 +625,7 @@
     const available = Math.floor(viewportHeight - top - bottomGap);
     const height = Math.max(minimum, available);
     calendarEl.style.setProperty('--personal-calendar-height', `${height}px`);
-    dashboardCalendar()?.updateSize?.();
+    personalCalendar?.updateSize?.();
   }
 
   function schedulePersonalCalendarHeightSync(delay = 0) {
@@ -728,6 +798,8 @@
     };
     personalMode = true;
     saveMainEventsSnapshot();
+    showPersonalCalendarHost();
+    initPersonalCalendar();
     installPersonalCalendarCreateHandlers();
     document.body.classList.add('personal-calendar-perspective');
     ensurePersonalViewOptions();
@@ -786,6 +858,7 @@
     const sideOrgFilter = document.getElementById('filterOrganization');
     document.body.classList.remove('personal-calendar-perspective', 'personal-search-expanded');
     personalMode = false;
+    hidePersonalCalendarHost();
     if (menu) {
       menu.innerHTML = savedDashboardUi?.menuHtml || '<span></span><span></span><span></span>';
       if (savedDashboardUi?.menuLabel) menu.setAttribute('aria-label', savedDashboardUi.menuLabel);
@@ -803,9 +876,12 @@
     document.getElementById('calendar')?.style.removeProperty('--personal-calendar-height');
     restoreCalendarCreateHandlers();
     restoreMainEvents();
-    dashboardCalendar()?.changeView?.(savedDashboardUi?.viewValue === 'multiMonthYear' ? 'multiMonthYear' : 'dayGridMonth');
+    mainDashboardCalendar()?.changeView?.(savedDashboardUi?.viewValue === 'multiMonthYear' ? 'multiMonthYear' : 'dayGridMonth');
+    mainDashboardCalendar()?.refetchEvents?.();
+    mainDashboardCalendar()?.updateSize?.();
     savedDashboardUi = null;
     window.CSC_SAVE_DASHBOARD_RELOAD_STATE?.();
+    window.CSC_RELOAD_MAIN_DASHBOARD_STORE?.();
   }
 
   function openPersonalForm(item = null, date = '') {
@@ -1325,12 +1401,9 @@
   }
 
   function renderPersonalCalendar() {
-    const store = dashboardStore();
     const calendar = dashboardCalendar();
-    if (!store || !calendar) return;
-    saveMainEventsSnapshot();
+    if (!calendar) return;
     ensureClassCategory();
-    store.events = visibleCalendarItems().map(personalScheduleRecord);
     if (calendar.setOption) {
       calendar.setOption('eventContent', renderPersonalCalendarEventContent);
       replacePersonalCalendarEventSource(calendar);
@@ -1850,7 +1923,7 @@
 
   function calendarDateFromPointer(target, clientX) {
     if (!target || !Number.isFinite(clientX)) return '';
-    const calendarEl = target.closest('#calendar');
+    const calendarEl = target.closest('#personalCalendarHost,#calendar');
     const columns = [...(calendarEl?.querySelectorAll('.fc-timegrid-col[data-date],.fc-col-header-cell[data-date]') || [])];
     const column = columns.find((item) => {
       const rect = item.getBoundingClientRect();
