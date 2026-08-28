@@ -2,10 +2,10 @@ const SESSION_KEY = 'core_supabase_auth_session';
 const NOTIFICATION_TABLE = 'notifications';
 const MAX_VISIBLE_NOTIFICATIONS = 50;
 const READ_STORAGE_PREFIX = 'csc_sync_notification_read_v2';
-const REALTIME_TABLES = ['calendar_items', 'announcements', 'concerns', 'conference_room_bookings'];
+const REALTIME_TABLES = ['calendar_items', 'announcements', 'concerns', 'conference_room_bookings', 'profiles'];
 const REALTIME_REFRESH_DELAY_MS = 180;
 const REALTIME_HEARTBEAT_MS = 25000;
-const NOTIFICATION_FILTERS = ['all', 'unread', 'schedules', 'concerns', 'announcements'];
+const NOTIFICATION_FILTERS = ['all', 'unread', 'schedules', 'concerns', 'announcements', 'accounts'];
 
 let context = {};
 let schemaMode = '';
@@ -451,7 +451,8 @@ function derivedNotifications(user = currentUser()) {
   return [
     ...derivedScheduleNotifications(s, user),
     ...derivedAnnouncementNotifications(s, user),
-    ...derivedConcernNotifications(s, user)
+    ...derivedConcernNotifications(s, user),
+    ...derivedPendingAccountNotifications(s, user)
   ];
 }
 
@@ -560,6 +561,30 @@ function derivedConcernNotifications(s = {}, user = currentUser()) {
   });
 }
 
+function derivedPendingAccountNotifications(s = {}, user = currentUser()) {
+  if (!isAdmin()) return [];
+  return (Array.isArray(s.pendingAccounts) ? s.pendingAccounts : [])
+    .filter((request) => request && (request.id || request.request_id))
+    .filter((request) => !['approved', 'rejected'].includes(String(request.status || '').toLowerCase()))
+    .map((request) => {
+      const requestId = request.id || request.request_id;
+      const organizationName = request.organization_name || request.organizationName || request.organization || request.username || 'An organization';
+      return derivedNotice({
+        id: `derived:account_request:${requestId}`,
+        user_id: user.id,
+        recipient_type: 'admin',
+        recipient_id: user.id,
+        notification_type: 'account_request',
+        type: 'account_request',
+        reference_table: 'profiles',
+        reference_id: requestId,
+        title: 'New Account Request',
+        message: `${organizationName} submitted a new organization account request.`,
+        created_at: request.created_at || request.submitted_at || request.updated_at || new Date().toISOString()
+      });
+    });
+}
+
 function derivedNotice(notice) {
   const normalized = normalizeNotification(notice);
   normalized.is_read = readKeys().has(notificationKey(normalized)) || readKeys().has(normalized.id);
@@ -610,6 +635,7 @@ function filteredNotifications(notices = []) {
     if (activeNotificationFilter === 'schedules') return notificationCategory(notice) === 'schedules';
     if (activeNotificationFilter === 'concerns') return notificationCategory(notice) === 'concerns';
     if (activeNotificationFilter === 'announcements') return notificationCategory(notice) === 'announcements';
+    if (activeNotificationFilter === 'accounts') return notificationCategory(notice) === 'accounts';
     return true;
   });
 }
@@ -630,20 +656,24 @@ function notificationToneClass(notice = {}) {
 }
 
 function filterLabel(filter) {
-  return ({ all: 'All', unread: 'Unread', schedules: 'Schedules', concerns: 'Concerns', announcements: 'Announcements' })[filter] || filter;
+  return ({ all: 'All', unread: 'Unread', schedules: 'Schedules', concerns: 'Concerns', announcements: 'Announcements', accounts: 'Accounts' })[filter] || filter;
 }
 
 function notificationIcon(notice = {}) {
   const type = String(notice.notification_type || notice.type || '').toLowerCase();
   if (type.includes('concern')) return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>';
   if (type.includes('announcement')) return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2Z"/><path d="M7 14v5a2 2 0 0 0 2 2h1"/></svg>';
+  if (type.includes('account')) return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>';
   if (type.includes('revision') || type.includes('edit')) return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z"/></svg>';
   if (type.includes('conference')) return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 21v-5h6v5"/><path d="M9 7h.01M12 7h.01M15 7h.01M9 11h.01M12 11h.01M15 11h.01"/></svg>';
   return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/><path d="M8 13h3v3H8z"/></svg>';
 }
 
 function notificationActionLabel(notice = {}) {
-  return String(notice.notification_type || notice.type || '').toLowerCase().includes('conference') ? 'Open' : 'View';
+  const type = String(notice.notification_type || notice.type || '').toLowerCase();
+  if (type.includes('conference')) return 'Open';
+  if (type.includes('account')) return 'Review';
+  return 'View';
 }
 
 async function queueRealtimeRefresh(payload = {}) {
@@ -789,7 +819,7 @@ function inferredReferenceTable(notice = {}) {
 
 function highlightReference(id) {
   if (!id) return;
-  const selector = `[data-id="${CSS.escape(id)}"],[data-event-id="${CSS.escape(id)}"],[data-concern-id="${CSS.escape(id)}"],[data-announcement-id="${CSS.escape(id)}"]`;
+  const selector = `[data-id="${CSS.escape(id)}"],[data-event-id="${CSS.escape(id)}"],[data-concern-id="${CSS.escape(id)}"],[data-announcement-id="${CSS.escape(id)}"],[data-account-request-id="${CSS.escape(id)}"]`;
   const target = document.querySelector(selector);
   if (!target) return;
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });

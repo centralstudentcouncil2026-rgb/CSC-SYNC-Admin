@@ -2975,7 +2975,7 @@ function accountRequestHtml(request) {
     Name: request.full_name || request.name || '',
     Submitted: request.created_at ? formatDateTime(request.created_at) : 'Pending'
   };
-  return `<div class="activity-item account-card pending-account-card"><div class="account-card-head"><div><strong>Pending Organization Account</strong><p>${escapeHtml(request.organization_name || request.username || 'Account request')}</p></div><div class="account-card-actions">${actionButton('account-request-approve', requestId, 'Approve', 'primary-button')}${actionButton('account-request-reject', requestId, 'Reject', 'danger-button')}</div></div><dl class="details-list account-details">${rowsObject(rows)}</dl></div>`;
+  return `<div class="activity-item account-card pending-account-card" data-id="${escapeHtml(requestId)}" data-account-request-id="${escapeHtml(requestId)}"><div class="account-card-head"><div><strong>Pending Organization Account</strong><p>${escapeHtml(request.organization_name || request.username || 'Account request')}</p></div><div class="account-card-actions">${actionButton('account-request-approve', requestId, 'Approve', 'primary-button')}${actionButton('account-request-reject', requestId, 'Reject', 'danger-button')}</div></div><dl class="details-list account-details">${rowsObject(rows)}</dl></div>`;
 }
 
 function userHtml(user) {

@@ -134,27 +134,41 @@
       }
 
       #usersModal .account-card-head {
-        display: block !important;
+        align-items: flex-start !important;
+        display: grid !important;
+        gap: 14px !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+      }
+
+      #usersModal .account-card-head > div:first-child {
+        min-width: 0 !important;
       }
 
       #usersModal .account-card-actions {
+        align-items: center !important;
         display: flex !important;
+        flex: 0 0 auto !important;
         flex-wrap: nowrap !important;
-        gap: 6px !important;
-        justify-content: stretch !important;
+        gap: 10px !important;
+        justify-content: flex-end !important;
         margin-top: auto !important;
+        min-width: max-content !important;
         padding-top: 12px !important;
         border-top: 1px solid #e2e8f0 !important;
         order: 30 !important;
       }
 
       #usersModal .account-card-actions button {
-        flex: 1 1 0 !important;
+        flex: 0 0 auto !important;
         margin: 0 !important;
         min-height: 34px !important;
-        min-width: 0 !important;
-        padding: 7px 8px !important;
-        font-size: .75rem !important;
+        min-width: 96px !important;
+        max-width: none !important;
+        overflow: visible !important;
+        padding: 8px 16px !important;
+        text-overflow: clip !important;
+        width: auto !important;
+        font-size: .82rem !important;
         border-radius: 999px !important;
         white-space: nowrap !important;
       }
@@ -324,18 +338,20 @@
         }
 
         #usersModal .account-card-actions {
+          justify-content: flex-start !important;
           display: flex !important;
-          flex-wrap: nowrap !important;
-          gap: 5px !important;
+          flex-wrap: wrap !important;
+          gap: 8px !important;
           grid-template-columns: none !important;
+          min-width: 0 !important;
         }
 
         #usersModal .account-card-actions button {
-          flex: 1 1 0 !important;
-          font-size: .68rem !important;
-          min-width: 0 !important;
-          padding-inline: 5px !important;
-          width: 100% !important;
+          flex: 1 1 104px !important;
+          font-size: .78rem !important;
+          min-width: 104px !important;
+          padding-inline: 12px !important;
+          width: auto !important;
           max-width: none !important;
         }
       }
