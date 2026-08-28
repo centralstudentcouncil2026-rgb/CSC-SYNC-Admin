@@ -41,6 +41,9 @@ let lastCalendarDetailsOpen = { scheduleId: '', at: 0 };
 const $ = (id) => document.getElementById(id);
 const FILTER_IDS = ['filterOrganization', 'filterVenue', 'filterCategory', 'filterEventType', 'filterDate', 'filterMonth', 'filterApproval', 'filterEventStatus'];
 const ADMIN_TAB_PAGE_IDS = new Set(['announcementsModal', 'eventRequestsModal', 'usersModal']);
+const DASHBOARD_RELOAD_STATE_VERSION = 1;
+const DASHBOARD_RELOAD_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 14;
+const RESTORABLE_DIALOG_IDS = new Set(['dashboardModal', 'filtersModal', 'notificationsModal', 'announcementsModal', 'concernsModal', 'eventRequestsModal', 'blockedTimesModal', 'categoriesModal', 'usersModal', 'activityLogModal']);
 const DEFAULT_ANNOUNCEMENT = {
   title: 'CSC S.Y.N.C. is ready for scheduling',
   content: 'Student organizations may now coordinate university-wide events through CSC S.Y.N.C.',
@@ -163,12 +166,16 @@ async function init() {
     }
     state.store = store;
     window.CONNECT_STATE = state;
+    window.CSC_SAVE_DASHBOARD_RELOAD_STATE = saveDashboardReloadStateNow;
     window.CSC_RELOAD_MAIN_DASHBOARD_STORE = reloadStore;
+    restoreDashboardReloadState();
     bindEvents();
     populateStaticOptions();
     renderAll();
     initializeCalendar();
+    applyRestoredDashboardControls();
     refreshCalendar();
+    queueMicrotask(restoreDashboardAreaAfterReload);
     scheduleMobileAnnouncementPopup();
     startStoreSync();
     if (notice) showToast(notice, noticeType);
@@ -267,8 +274,9 @@ function bindEvents() {
     state.filters.organization = event.target.value;
     if ($('filterOrganization')) $('filterOrganization').value = state.filters.organization;
     refreshCalendar();
+    scheduleDashboardReloadStateSave();
   });
-  on('searchInput', 'input', debounce((event) => { state.search = cleanSingleLine(event.target.value).slice(0, TEXT_LIMITS.search).toLowerCase(); refreshCalendar(); }, 180));
+  on('searchInput', 'input', debounce((event) => { state.search = cleanSingleLine(event.target.value).slice(0, TEXT_LIMITS.search).toLowerCase(); refreshCalendar(); scheduleDashboardReloadStateSave(); }, 180));
   on('registerRole', 'change', updateRegistrationFields);
   on('eventEntryType', 'change', updateEventEntryType);
   on('eventScheduleType', 'change', updateScheduleType);
@@ -290,7 +298,9 @@ function bindEvents() {
     }
     const closer = event.target.closest('[data-close]');
     if (closer) closeDialog(closer.dataset.close);
+    window.setTimeout(scheduleDashboardReloadStateSave, 0);
   });
+  window.addEventListener('beforeunload', saveDashboardReloadStateNow);
   document.addEventListener('pointerdown', handlePublicDialogPointerDown);
   document.addEventListener('keydown', handlePublicDialogKeyDown);
   const resizeCalendar = debounce(handleResize, 120);
@@ -3395,6 +3405,7 @@ function updateFilters() {
   state.filters = Object.fromEntries(FILTER_IDS.map((id) => [filterKey(id), cleanSingleLine($(id).value)]));
   if ($('headerOrganizationFilter')) $('headerOrganizationFilter').value = state.filters.organization;
   refreshCalendar();
+  scheduleDashboardReloadStateSave();
 }
 
 function resetFilters() {
@@ -3405,6 +3416,152 @@ function resetFilters() {
 
 function filterKey(id) {
   return id.replace(/^filter/, '').replace(/^\w/, (letter) => letter.toLowerCase());
+}
+
+function dashboardReloadStateKey() {
+  const user = currentUser(state.store);
+  const page = location.pathname.toLowerCase().includes('/org/') ? 'org' : 'admin';
+  const userId = cleanStorageKeyPart(user?.id || user?.username || 'guest');
+  return `csc_sync_dashboard_reload_state_${page}_${userId}`;
+}
+
+function cleanStorageKeyPart(value) {
+  return String(value || 'guest').replace(/[^a-z0-9_-]/gi, '_').slice(0, 80);
+}
+
+function isDashboardReloadNavigation() {
+  const entry = performance.getEntriesByType?.('navigation')?.[0];
+  if (entry?.type) return entry.type === 'reload';
+  return performance.navigation?.type === 1;
+}
+
+function readDashboardReloadState() {
+  if (!isDashboardReloadNavigation()) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(dashboardReloadStateKey()) || 'null');
+    if (!saved || saved.version !== DASHBOARD_RELOAD_STATE_VERSION) return null;
+    if (Date.now() - Number(saved.updatedAt || 0) > DASHBOARD_RELOAD_MAX_AGE_MS) return null;
+    return saved;
+  } catch {
+    return null;
+  }
+}
+
+function restoreDashboardReloadState() {
+  const saved = readDashboardReloadState();
+  if (!saved) return;
+  if (saved.filters && typeof saved.filters === 'object') {
+    FILTER_IDS.forEach((id) => {
+      const key = filterKey(id);
+      if (key in saved.filters) state.filters[key] = cleanSingleLine(saved.filters[key]);
+    });
+  }
+  state.search = cleanSingleLine(saved.search || '').slice(0, TEXT_LIMITS.search).toLowerCase();
+  state.pendingReloadPerspective = saved.perspective === 'personal' ? 'personal' : 'main';
+  state.pendingReloadDialogId = cleanSingleLine(saved.openDialogId || '');
+  state.pendingReloadCalendarDate = cleanSingleLine(saved.calendarDate || '');
+  if (MAIN_CALENDAR_VIEWS.has(saved.portalViewMode) || PERSONAL_CALENDAR_VIEWS.has(saved.portalViewMode)) {
+    state.portalViewMode = saved.portalViewMode;
+    state.currentView = calendarViewMode(saved.portalViewMode);
+  }
+}
+
+function applyRestoredDashboardControls() {
+  FILTER_IDS.forEach((id) => {
+    const field = $(id);
+    if (field) field.value = state.filters[filterKey(id)] || '';
+  });
+  if ($('headerOrganizationFilter')) $('headerOrganizationFilter').value = state.filters.organization || '';
+  if ($('searchInput')) $('searchInput').value = state.search || '';
+  if (state.pendingReloadPerspective === 'personal') {
+    window.CSC_PENDING_PERSONAL_CALENDAR_RESTORE = {
+      view: state.portalViewMode,
+      calendarDate: state.pendingReloadCalendarDate
+    };
+    return;
+  }
+  restoreCalendarPositionAfterReload();
+}
+
+function restoreCalendarPositionAfterReload() {
+  if (!state.calendar) return;
+  const date = new Date(state.pendingReloadCalendarDate);
+  if (Number.isFinite(date.getTime())) state.calendar.gotoDate(date);
+  const view = activeCalendarViews().has(state.portalViewMode) ? state.portalViewMode : 'dayGridMonth';
+  if (state.calendar.view.type !== view) state.calendar.changeView(view);
+  const selector = $('viewSelector');
+  if (selector) selector.value = portalSelectorValue();
+}
+
+function restoreDashboardAreaAfterReload() {
+  if (state.pendingReloadPerspective === 'personal') {
+    requestPersonalCalendarReloadRestore();
+    state.pendingReloadDialogId = '';
+    return;
+  }
+  const id = state.pendingReloadDialogId;
+  state.pendingReloadDialogId = '';
+  if (!id) return;
+  const openers = {
+    dashboardModal: openDashboard,
+    filtersModal: () => openDialog('filtersModal'),
+    notificationsModal: openNotifications,
+    announcementsModal: openAnnouncements,
+    concernsModal: openConcerns,
+    eventRequestsModal: openEventRequests,
+    blockedTimesModal: openBlockedTimes,
+    categoriesModal: openCategories,
+    usersModal: openUsers,
+    activityLogModal: openActivityLog
+  };
+  window.setTimeout(() => openers[id]?.(), 0);
+}
+
+function requestPersonalCalendarReloadRestore(attempt = 0) {
+  if (document.body.classList.contains('personal-calendar-perspective')) {
+    state.pendingReloadPerspective = '';
+    saveDashboardReloadStateNow();
+    return;
+  }
+  window.dispatchEvent(new CustomEvent('csc:restore-personal-calendar'));
+  if (attempt < 24) {
+    window.setTimeout(() => requestPersonalCalendarReloadRestore(attempt + 1), 125);
+  }
+}
+
+function currentRestorableDialogId() {
+  const activeTab = [...ADMIN_TAB_PAGE_IDS].find((id) => $(id)?.classList.contains('is-active'));
+  if (activeTab) return activeTab;
+  return [...RESTORABLE_DIALOG_IDS].find((id) => $(id)?.open) || '';
+}
+
+function dashboardReloadSnapshot() {
+  const restoringPersonal = state.pendingReloadPerspective === 'personal' || Boolean(window.CSC_PENDING_PERSONAL_CALENDAR_RESTORE);
+  return {
+    version: DASHBOARD_RELOAD_STATE_VERSION,
+    updatedAt: Date.now(),
+    perspective: document.body.classList.contains('personal-calendar-perspective') || restoringPersonal ? 'personal' : 'main',
+    portalViewMode: restoringPersonal ? state.portalViewMode : state.calendar?.view?.type || state.portalViewMode,
+    currentView: state.currentView,
+    calendarDate: restoringPersonal && state.pendingReloadCalendarDate ? state.pendingReloadCalendarDate : state.calendar?.getDate?.()?.toISOString?.() || '',
+    filters: { ...state.filters },
+    search: state.search || '',
+    openDialogId: currentRestorableDialogId()
+  };
+}
+
+function saveDashboardReloadStateNow() {
+  if (!state.store) return;
+  try {
+    localStorage.setItem(dashboardReloadStateKey(), JSON.stringify(dashboardReloadSnapshot()));
+  } catch (error) {
+    console.warn('Dashboard reload state could not be saved:', error);
+  }
+}
+
+function scheduleDashboardReloadStateSave() {
+  window.clearTimeout(state.dashboardReloadSaveTimer);
+  state.dashboardReloadSaveTimer = window.setTimeout(saveDashboardReloadStateNow, 80);
 }
 
 function updateAvailability() {
@@ -3431,6 +3588,7 @@ function changeView(view) {
   state.calendar.changeView(state.portalViewMode);
   const selector = $('viewSelector');
   if (selector) selector.value = portalSelectorValue();
+  scheduleDashboardReloadStateSave();
   setTimeout(() => state.calendar.updateSize(), 0);
 }
 
@@ -3438,6 +3596,7 @@ function returnToCurrentWeek() {
   state.portalViewMode = 'dayGridMonth';
   state.calendar.changeView('dayGridMonth');
   state.calendar.today();
+  scheduleDashboardReloadStateSave();
 }
 
 function portalSelectorValue() {
@@ -3580,6 +3739,7 @@ function openAdminTabPage(id) {
   page.scrollTop = 0;
   window.CONNECT_STATE?.calendar?.updateSize?.();
   try { sessionStorage.setItem('csc_active_dashboard_tab_admin', `${id.replace(/Modal$/, '')}Button`); } catch {}
+  scheduleDashboardReloadStateSave();
 }
 
 function closeAdminTabPage(id) {
@@ -3593,6 +3753,7 @@ function closeAdminTabPage(id) {
     window.CONNECT_STATE?.calendar?.updateSize?.();
     try { sessionStorage.setItem('csc_active_dashboard_tab_admin', 'mainCalendar'); } catch {}
   }
+  scheduleDashboardReloadStateSave();
 }
 
 function ensureAdminTabPageHeader(page) {
