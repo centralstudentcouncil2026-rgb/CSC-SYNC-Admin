@@ -206,7 +206,6 @@
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventPublicDescription),
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventPurpose),
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventAttendees),
-      body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] label:has(#eventRecurrenceUntil),
       body.personal-calendar-perspective #eventForm[data-personal-schedule="1"] #deleteEventButton{display:none!important;}
       #detailsModal[data-personal-schedule-details] #detailsDeleteButton,
       #detailsModal[data-personal-schedule-details] #detailsCancelButton,
@@ -423,6 +422,7 @@
       </select>
     `;
     const untilLabel = document.createElement('label');
+    untilLabel.id = 'eventRecurrenceUntilLabel';
     untilLabel.innerHTML = 'Repeat Until<input type="date" id="eventRecurrenceUntil">';
     scheduleFields.insertAdjacentElement('afterend', untilLabel);
     scheduleFields.insertAdjacentElement('afterend', repeatLabel);
@@ -970,7 +970,9 @@
     const startTime = document.getElementById('eventStart').value;
     const endTime = document.getElementById('eventEnd').value;
     const recurrenceType = document.getElementById('eventRecurrenceType')?.value || 'none';
-    const recurrenceUntil = document.getElementById('eventRecurrenceUntil')?.value || defaultRecurrenceUntil(startDate, recurrenceType);
+    const recurrenceUntil = recurrenceType === 'none'
+      ? ''
+      : (document.getElementById('eventRecurrenceUntil')?.value || defaultRecurrenceUntil(startDate, recurrenceType));
     const occurrences = buildOccurrences({ startDate, startTime, endDate, endTime, recurrenceType, recurrenceUntil });
     if (!occurrences.length) throw new Error('Choose a valid date and time.');
     const current = user();
@@ -1005,6 +1007,7 @@
   }
 
   function validatePersonalFormRequirements(payload = null) {
+    const recurrenceType = document.getElementById('eventRecurrenceType')?.value || 'none';
     const required = [
       ['Event title', document.getElementById('eventTitle')?.value],
       ['Venue', document.getElementById('eventVenue')?.value],
@@ -1014,6 +1017,7 @@
       ['Repeat', document.getElementById('eventRecurrenceType')?.value],
       ['Privacy level', document.getElementById('eventPrivacy')?.value]
     ];
+    if (recurrenceType !== 'none') required.push(['Repeat until', document.getElementById('eventRecurrenceUntil')?.value]);
     const missing = required.filter(([, value]) => !String(value || '').trim()).map(([label]) => label);
     if (missing.length) throw new Error(`${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} required.`);
     const firstOccurrence = payload?.occurrences?.[0];
@@ -1789,8 +1793,7 @@
       'eventContactPerson',
       'eventContactInfo',
       'eventPublicDescription',
-      'eventPurpose',
-      'eventRecurrenceUntil'
+      'eventPurpose'
     ];
     const requiredPersonalFields = [
       'eventTitle',
@@ -1844,6 +1847,31 @@
       endDate.required = false;
       endDate.value = startDate;
     }
+    syncRecurrenceUntilVisibility();
+  }
+
+  function recurrenceUntilFromRecord(item = {}) {
+    if (item?.recurrence_until) return localDateInput(item.recurrence_until);
+    const occurrences = Array.isArray(item?.occurrences) ? item.occurrences : [];
+    if (occurrences.length > 1) {
+      const last = occurrences[occurrences.length - 1];
+      return localDateInput(last?.end_time || last?.start_time || item.end_time || item.start_time);
+    }
+    return '';
+  }
+
+  function syncRecurrenceUntilVisibility() {
+    const form = document.getElementById('eventForm');
+    if (form?.dataset.personalSchedule !== '1') return;
+    const repeat = document.getElementById('eventRecurrenceType');
+    const until = document.getElementById('eventRecurrenceUntil');
+    const label = document.getElementById('eventRecurrenceUntilLabel') || until?.closest('label');
+    if (!repeat || !until) return;
+    const repeating = repeat.value !== 'none';
+    if (label) label.hidden = !repeating;
+    until.required = repeating;
+    if (!repeating) until.value = '';
+    else if (!until.value) until.value = defaultRecurrenceUntil(document.getElementById('eventDate')?.value || '', repeat.value);
   }
 
   function openNativeScheduleModal(item = null, date = '') {
@@ -1877,8 +1905,8 @@
     setValue('eventContactInfo', item?.contact_info || '');
     setValue('eventPublicDescription', item?.public_description || item?.personal_notes || '');
     setValue('eventPurpose', item?.purpose || item?.personal_notes || '');
-    setValue('eventRecurrenceType', item?.recurrence_type || 'none');
-    setValue('eventRecurrenceUntil', item?.recurrence_until || '');
+    setValue('eventRecurrenceType', item?.recurrence_type || (Array.isArray(item?.occurrences) && item.occurrences.length > 1 ? 'weekly' : 'none'));
+    setValue('eventRecurrenceUntil', recurrenceUntilFromRecord(item));
     syncPersonalScheduleTypeFields();
     if (typeof modal.showModal === 'function') modal.showModal();
     else modal.setAttribute('open', '');
@@ -2285,7 +2313,7 @@
       }
     }, true);
     document.addEventListener('change', (event) => {
-      if (personalMode && (event.target?.id === 'eventScheduleType' || event.target?.id === 'eventDate')) {
+      if (personalMode && (event.target?.id === 'eventScheduleType' || event.target?.id === 'eventDate' || event.target?.id === 'eventRecurrenceType')) {
         syncPersonalScheduleTypeFields();
       }
       if (!personalMode || event.target?.id !== 'viewSelector') return;
