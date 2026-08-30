@@ -1360,6 +1360,58 @@
     return `${start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} - ${end.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`;
   }
 
+  const PERSONAL_OVERLAP_COLORS = [
+    { backgroundColor: '#2563eb', borderColor: '#1d4ed8' },
+    { backgroundColor: '#7c3aed', borderColor: '#6d28d9' },
+    { backgroundColor: '#0f766e', borderColor: '#0f766e' },
+    { backgroundColor: '#d97706', borderColor: '#b45309' },
+    { backgroundColor: '#be123c', borderColor: '#9f1239' }
+  ];
+
+  function dateKey(value) {
+    return String(value || '').slice(0, 10);
+  }
+
+  function eventsOverlap(left = {}, right = {}) {
+    const leftStart = new Date(left.start).getTime();
+    const leftEnd = new Date(left.end || left.start).getTime();
+    const rightStart = new Date(right.start).getTime();
+    const rightEnd = new Date(right.end || right.start).getTime();
+    return Number.isFinite(leftStart)
+      && Number.isFinite(leftEnd)
+      && Number.isFinite(rightStart)
+      && Number.isFinite(rightEnd)
+      && leftStart < rightEnd
+      && rightStart < leftEnd;
+  }
+
+  function colorOverlappingPersonalEvents(eventRows = []) {
+    const byDate = new Map();
+    eventRows.forEach((event) => {
+      const key = dateKey(event.start);
+      if (!key) return;
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key).push(event);
+    });
+    byDate.forEach((dayEvents) => {
+      const positioned = [];
+      dayEvents
+        .slice()
+        .sort((left, right) => new Date(left.start) - new Date(right.start))
+        .forEach((event) => {
+          const usedIndexes = new Set(positioned.filter((placed) => eventsOverlap(placed.event, event)).map((placed) => placed.colorIndex));
+          let colorIndex = 0;
+          while (usedIndexes.has(colorIndex)) colorIndex += 1;
+          const color = PERSONAL_OVERLAP_COLORS[colorIndex % PERSONAL_OVERLAP_COLORS.length];
+          event.backgroundColor = color.backgroundColor;
+          event.borderColor = color.borderColor;
+          event.extendedProps = { ...(event.extendedProps || {}), overlapColorIndex: colorIndex };
+          positioned.push({ event, colorIndex });
+        });
+    });
+    return eventRows;
+  }
+
   function renderMessage(message) {
     const list = document.getElementById('personalCalendarResults');
     if (list) {
@@ -1392,7 +1444,7 @@
 
   function calendarEvents() {
     const uid = currentUserId();
-    return visibleCalendarItems().flatMap((item) => {
+    const rows = visibleCalendarItems().flatMap((item) => {
       const record = personalScheduleRecord(item);
       const occurrences = Array.isArray(record.occurrences) && record.occurrences.length
         ? record.occurrences
@@ -1420,6 +1472,7 @@
         }
       }));
     });
+    return colorOverlappingPersonalEvents(rows);
   }
 
   function isPersonalScheduleItem(item = {}) {
