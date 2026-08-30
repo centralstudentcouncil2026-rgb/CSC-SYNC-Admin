@@ -304,10 +304,43 @@ async function refreshSession(){const refreshToken=session()?.refresh_token;if(!
 export async function requestAccount({username,password,fullName,organizationName,email='',phoneNumber='',organizationCode=''}){const normalizedEmail=String(email).trim().toLowerCase();let signup;try{signup=await request('/auth/v1/signup',{method:'POST',body:body({email:normalizedEmail,password,data:{full_name:fullName,username,organization_name:organizationName,organization_code:organizationCode||username,contact_number:phoneNumber,account_type:'organization',email_category:'aup'}})})}catch(error){const isDuplicateAccount=/user_already_exists|already registered|user already exists/i.test(`${error?.code||''} ${error?.message||''}`);const message=isDuplicateAccount?'This AUP email is already registered. Wait for admin approval, or ask an admin to review the existing request.':(error?.message||'Organization signup failed.');console.error('Organization signup error:',{message,status:error?.status,code:error?.code,details:error?.details});if(typeof alert==='function')alert(message);if(isDuplicateAccount)throw new Error(message);throw error}const userId=signup?.user?.id;if(!userId)throw new Error('Supabase could not create the organization account.');const signupHeaders=signup?.access_token?{Authorization:`Bearer ${signup.access_token}`}:{ };await request('/rest/v1/profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal',...signupHeaders},body:body({id:userId,username,full_name:fullName,email:normalizedEmail,role:'organization_manager',account_type:'org',organization_name:organizationName,contact_number:phoneNumber,approval_status:'pending',is_enabled:false})});return signup}
 export async function decideAccountRequest(id,decision){return rpc('approve_organization_profile',{p_profile_id:id,p_decision:decision},true)}
 const DELETE_COLLECTION_ALIASES={activityLogs:['activity_logs','activityLogs']};
-export async function deleteRecord(collection,id){
+function profileDeleteFilters(id,record={}){
+  const values=[
+    ['id',id],
+    ['id',record.id],
+    ['email',record.email],
+    ['email',record.aup_email],
+    ['username',record.username]
+  ];
+  const seen=new Set();
+  return values
+    .map(([column,value])=>[column,String(value||'').trim()])
+    .filter(([,value])=>value)
+    .filter(([column,value])=>{
+      const key=`${column}:${value.toLowerCase()}`;
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    })
+    .map(([column,value])=>`${column}=eq.${encodeURIComponent(value)}`);
+}
+async function deleteProfileRecord(id,record={}){
+  const filters=profileDeleteFilters(id,record);
+  const errors=[];
+  for(const filter of filters){
+    try{
+      const rows=await request(`/rest/v1/profiles?${filter}&select=id,email,username`,{method:'DELETE',headers:{Prefer:'return=representation'}},true);
+      if(Array.isArray(rows)&&rows.length)return rows;
+    }catch(error){
+      errors.push(`${filter}: ${error.message}`);
+    }
+  }
+  const detail=errors.length?` ${errors.join('; ')}`:'';
+  throw new Error(`No matching profile row was deleted for account ${id}.${detail}`);
+}
+export async function deleteRecord(collection,id,record={}){
   if(['users','accounts'].includes(collection)){
-    await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'},true);
-    return;
+    return deleteProfileRecord(id,record);
   }
   if(['events','blockedTimes','categories'].includes(collection)){
     await request(`/rest/v1/calendar_items?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'},true);

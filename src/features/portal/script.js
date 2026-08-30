@@ -3155,12 +3155,13 @@ function deleteAccount(id) {
   confirmAction(`Delete account "${user.full_name}"?`, async () => {
     const deleted = { ...user, deleted_at: new Date().toISOString(), deleted_by: currentUser(state.store).id };
     try {
-      await deleteRecord('users', id);
+      await deleteRecord('users', id, user);
     } catch (error) {
       showToast(`Account could not be deleted from database: ${error.message}`, 'error');
       return;
     }
     state.store.users = state.store.users.filter((item) => item.id !== id);
+    state.store.pendingAccounts = (state.store.pendingAccounts || []).filter((item) => item.id !== id);
     log('account_deleted', `Deleted account "${deleted.full_name}".`, deleted);
     await persist('Account deleted.');
     renderUsers();
