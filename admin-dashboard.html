@@ -6398,6 +6398,12 @@ await import(moduleUrls[moduleOrder.at(-1)]);
         body.personal-calendar-perspective #personalCalendarHost .personal-calendar-event-title,
         body.personal-calendar-perspective #personalCalendarHost .personal-calendar-event-content{font-size:9.5px!important;font-weight:800!important;gap:1px!important;line-height:1.05!important;}
       }
+      body.personal-calendar-perspective #mobileMenuButton{flex-direction:row!important;gap:0!important;}
+      body.personal-calendar-perspective #mobileMenuButton span{display:none!important;}
+      body.personal-calendar-perspective #mobileMenuButton::before{content:'\\2190'!important;display:block!important;font-size:1.3rem!important;font-weight:800!important;line-height:1!important;}
+      @media (max-width: 420px){
+        body.personal-calendar-perspective #mobileMenuButton::before{font-size:1rem!important;}
+      }
     `;
     document.head.appendChild(style);
   }
