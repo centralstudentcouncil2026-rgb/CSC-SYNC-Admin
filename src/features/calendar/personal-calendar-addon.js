@@ -392,7 +392,14 @@
       body.personal-calendar-perspective #mobileMenuButton{flex-direction:row!important;gap:0!important;}
       body.personal-calendar-perspective #mobileMenuButton span{display:none!important;}
       body.personal-calendar-perspective #mobileMenuButton::before{content:'\\2190'!important;display:block!important;font-size:1.3rem!important;font-weight:800!important;line-height:1!important;}
+      body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:44px!important;align-items:center!important;}
+      body.personal-calendar-perspective #viewSelector{height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;flex:0 0 122px!important;min-width:112px!important;max-width:132px!important;border-radius:999px!important;font-size:1rem!important;line-height:1!important;padding:0 18px!important;}
+      body.personal-calendar-perspective .period-controls .icon-button,
+      body.personal-calendar-perspective #notificationsButton{height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;width:var(--personal-calendar-control-size)!important;min-width:var(--personal-calendar-control-size)!important;max-width:var(--personal-calendar-control-size)!important;border-radius:999px!important;padding:0!important;}
+      body.personal-calendar-perspective #personalCalendarHeaderSearch{height:calc(var(--personal-calendar-control-size) - 6px)!important;min-height:calc(var(--personal-calendar-control-size) - 6px)!important;border-radius:999px!important;}
       @media (max-width: 420px){
+        body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:40px!important;}
+        body.personal-calendar-perspective #viewSelector{flex-basis:104px!important;min-width:96px!important;max-width:110px!important;font-size:.9rem!important;padding:0 14px!important;}
         body.personal-calendar-perspective #mobileMenuButton::before{font-size:1rem!important;}
       }
     `;
