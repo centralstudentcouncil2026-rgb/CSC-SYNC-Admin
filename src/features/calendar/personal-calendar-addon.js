@@ -391,14 +391,14 @@
       body.personal-calendar-perspective #mobileMenuButton{flex-direction:row!important;gap:0!important;}
       body.personal-calendar-perspective #mobileMenuButton span{display:none!important;}
       body.personal-calendar-perspective #mobileMenuButton::before{content:'\\2190'!important;display:block!important;font-size:1.3rem!important;font-weight:800!important;line-height:1!important;}
-      body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:44px!important;align-items:center!important;}
-      body.personal-calendar-perspective #viewSelector{box-sizing:border-box!important;height:var(--personal-calendar-control-size)!important;max-height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;flex:0 1 118px!important;min-width:92px!important;max-width:118px!important;border-radius:999px!important;font-size:1rem!important;line-height:1!important;padding:0 18px!important;text-align:center!important;text-align-last:center!important;}
+      body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:40px!important;align-items:center!important;}
+      body.personal-calendar-perspective #viewSelector{align-items:center!important;box-sizing:border-box!important;height:var(--personal-calendar-control-size)!important;max-height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;flex:0 0 112px!important;min-width:104px!important;max-width:112px!important;border-radius:999px!important;font-size:.95rem!important;line-height:1!important;padding:0 16px!important;text-align:center!important;text-align-last:center!important;}
       body.personal-calendar-perspective .period-controls .icon-button,
       body.personal-calendar-perspective #notificationsButton{align-items:center!important;aspect-ratio:1/1!important;box-sizing:border-box!important;flex:0 0 var(--personal-calendar-control-size)!important;height:var(--personal-calendar-control-size)!important;justify-content:center!important;max-height:var(--personal-calendar-control-size)!important;max-width:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;min-width:var(--personal-calendar-control-size)!important;border-radius:999px!important;padding:0!important;width:var(--personal-calendar-control-size)!important;}
       body.personal-calendar-perspective #personalCalendarHeaderSearch{box-sizing:border-box!important;height:var(--personal-calendar-control-size)!important;max-height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;border-radius:999px!important;}
       @media (max-width: 420px){
-        body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:30px!important;}
-        body.personal-calendar-perspective #viewSelector{flex-basis:30px!important;min-width:30px!important;max-width:30px!important;font-size:0!important;padding:0!important;text-indent:-999px!important;}
+        body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:34px!important;}
+        body.personal-calendar-perspective #viewSelector{flex-basis:72px!important;min-width:68px!important;max-width:76px!important;font-size:.75rem!important;padding:0 8px!important;text-indent:0!important;}
         body.personal-calendar-perspective #mobileMenuButton::before{font-size:1rem!important;}
       }
     `;
