@@ -325,6 +325,14 @@ function profileDeleteFilters(id,record={}){
     .map(([column,value])=>`${column}=eq.${encodeURIComponent(value)}`);
 }
 async function deleteProfileRecord(id,record={}){
+  if(id){
+    try{
+      const rows=await rpc('delete_admin_managed_profile',{p_profile_id:id},true);
+      if(Array.isArray(rows)&&rows.length)return rows;
+    }catch(error){
+      if(!/function .*delete_admin_managed_profile|schema cache|could not find/i.test(error.message||''))throw error;
+    }
+  }
   const filters=profileDeleteFilters(id,record);
   const errors=[];
   for(const filter of filters){
