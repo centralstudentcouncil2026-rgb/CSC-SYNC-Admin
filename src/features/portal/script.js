@@ -141,6 +141,7 @@ const state = {
   storeSyncTimer: 0,
   storeSyncing: false,
   storeSyncChannel: null,
+  scheduleSaveInFlight: false,
   portalViewMode: 'dayGridMonth',
   currentView: 'month',
   formMode: 'create',
@@ -1583,6 +1584,26 @@ function syncSingleDayEndDate() {
   if ($('eventScheduleType').value === 'single_day') $('eventEndDate').value = $('eventDate').value;
 }
 
+function setScheduleSaving(saving) {
+  state.scheduleSaveInFlight = saving;
+  const form = $('eventForm');
+  if (form) form.dataset.saving = saving ? '1' : '0';
+  const buttons = [form?.querySelector('.modal-actions .primary-button'), $('agreementSubmitButton')].filter(Boolean);
+  buttons.forEach((button) => {
+    if (saving) {
+      button.dataset.defaultText = button.dataset.defaultText || button.textContent;
+      button.textContent = 'Saving...';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    } else {
+      if (button.dataset.defaultText) button.textContent = button.dataset.defaultText;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }
+  });
+  if (!saving) updateAgreementButton();
+}
+
 function findEventBlock(event) {
   return eventOccurrences(event).map((item) => findBlockingTime(state.store, item.start_time, item.end_time)).find(Boolean);
 }
@@ -1603,10 +1624,11 @@ function scheduleSummary(event) {
   return eventOccurrences(event).map((item) => `${formatDateTime(item.start_time)} to ${formatTime(item.end_time)}`).join('\n');
 }
 
-function submitEventForm(event) {
+async function submitEventForm(event) {
   event.preventDefault();
+  if (state.scheduleSaveInFlight) return;
   if (eventEntryType() === 'blocked_time') {
-    submitBlockedScheduleForm();
+    await submitBlockedScheduleForm();
     return;
   }
   let candidate;
@@ -1631,10 +1653,20 @@ function submitEventForm(event) {
   state.editingScheduleId = editingScheduleId;
   state.pendingEvent = candidate;
   if (conflicts.length) log('event_conflict_warning', `"${candidate.title}" has schedule conflicts.`, { event_id: candidate.id, conflict_ids: candidate.conflict_event_ids });
+  if (isSuperAdmin(state.store)) {
+    setScheduleSaving(true);
+    try {
+      await openAgreementOrPersist(candidate, formMode);
+    } finally {
+      setScheduleSaving(false);
+    }
+    return;
+  }
   openAgreementOrPersist(candidate, formMode);
 }
 
 async function submitBlockedScheduleForm() {
+  if (state.scheduleSaveInFlight) return;
   if (!requirePermission(canManageBlockedTimes(state.store), 'This account cannot create blocked schedules.')) return;
   let block;
   try {
@@ -1645,7 +1677,12 @@ async function submitBlockedScheduleForm() {
   }
   const error = validateBlockedSchedule(block);
   if (error) return showToast(error, 'error');
-  await saveBlockedSchedule(block);
+  setScheduleSaving(true);
+  try {
+    await saveBlockedSchedule(block);
+  } finally {
+    setScheduleSaving(false);
+  }
 }
 
 function readBlockedScheduleForm() {
@@ -1744,16 +1781,17 @@ function openAgreementOrPersist(candidate, formMode = state.formMode || candidat
 function updateAgreementButton() { $('agreementSubmitButton').disabled = !$('agreeRules').checked || !$('agreePrivacy').checked; $('agreementWarning').hidden = !$('agreementSubmitButton').disabled; }
 async function finishAgreement() {
   const button = $('agreementSubmitButton');
-  if (!button || button.disabled || !state.pendingEvent) return;
-  button.disabled = true;
-  button.textContent = 'Saving...';
-  const pendingMode = state.pendingEvent.form_mode || state.formMode || 'create';
-  const saved = pendingMode === 'edit'
-    ? await saveScheduleChanges(state.editingScheduleId || state.pendingEvent.id, state.pendingEvent, scheduleSaveRole())
-    : await createSchedule(state.pendingEvent);
-  if (saved) closeDialog('agreementModal');
-  button.textContent = 'I Agree and Post';
-  updateAgreementButton();
+  if (!button || button.disabled || !state.pendingEvent || state.scheduleSaveInFlight) return;
+  setScheduleSaving(true);
+  try {
+    const pendingMode = state.pendingEvent.form_mode || state.formMode || 'create';
+    const saved = pendingMode === 'edit'
+      ? await saveScheduleChanges(state.editingScheduleId || state.pendingEvent.id, state.pendingEvent, scheduleSaveRole())
+      : await createSchedule(state.pendingEvent);
+    if (saved) closeDialog('agreementModal');
+  } finally {
+    setScheduleSaving(false);
+  }
 }
 
 function scheduleSaveRole() {

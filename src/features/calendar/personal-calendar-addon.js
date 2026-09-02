@@ -2133,7 +2133,7 @@
   }
 
   function enhancePostedScheduleSubmit(event) {
-    if (event.target?.id !== 'eventForm') return;
+    if (event.target?.id !== 'eventForm' || !personalMode || event.target?.dataset?.personalSchedule !== '1') return;
     const recurrenceType = document.getElementById('eventRecurrenceType')?.value || 'none';
     if (recurrenceType === 'none') return;
     const title = document.getElementById('eventTitle')?.value?.trim();
