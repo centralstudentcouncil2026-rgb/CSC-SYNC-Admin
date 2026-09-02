@@ -1211,22 +1211,26 @@ function openEventModal(range, record = null) {
   if ($('eventEntryType')) $('eventEntryType').value = isBlockRecord ? 'blocked_time' : 'schedule';
   $('eventCategory').value = record?.category_id || state.store.categories.find((item) => item.active)?.id || '';
   $('eventTitle').value = record?.title || ''; $('eventVenue').value = record?.venue || '';
+  const savedRepeatRule = record?.repeat_rule || record?.recurrence_type || record?.repeat || 'none';
   const occurrences = isBlockRecord
     ? [{ id: record?.id || createId(), date: dateInput(record?.start_time || range.start), start_time: record?.start_time || calendarFloatingIso(range.start), end_time: record?.end_time || calendarFloatingIso(range.end) }]
     : (record ? eventOccurrences(record) : range.occurrences || [{ id: createId(), date: dateInput(range.start), start_time: calendarFloatingIso(range.start), end_time: calendarFloatingIso(range.end) }]);
-  const spansMultipleDates = occurrences.length > 1 || dateInput(occurrences[0]?.start_time) !== dateInput(occurrences.at(-1)?.end_time);
-  $('eventScheduleType').value = isBlockRecord ? (record?.block_type === 'whole_day' ? 'single_day' : record?.block_type || (spansMultipleDates ? 'multi_day' : 'single_day')) : (record?.schedule_type || (spansMultipleDates ? 'multi_day' : 'single_day'));
+  const repeatedSchedule = isRepeatRule(savedRepeatRule);
+  const occurrenceSpansDates = occurrences.some((occurrence) => dateInput(occurrence.start_time) !== dateInput(occurrence.end_time));
+  const spansMultipleDates = occurrenceSpansDates || (!repeatedSchedule && occurrences.length > 1);
+  const formScheduleType = repeatedSchedule && !occurrenceSpansDates ? 'single_day' : (record?.schedule_type || (spansMultipleDates ? 'multi_day' : 'single_day'));
+  const endOccurrence = repeatedSchedule ? occurrences[0] : occurrences.at(-1);
+  $('eventScheduleType').value = isBlockRecord ? (record?.block_type === 'whole_day' ? 'single_day' : record?.block_type || (spansMultipleDates ? 'multi_day' : 'single_day')) : formScheduleType;
   $('eventDate').value = dateInput(occurrences[0].start_time);
   $('eventStart').value = timeInput(occurrences[0].start_time);
-  $('eventEndDate').value = dateInput(occurrences.at(-1).end_time);
-  $('eventEnd').value = timeInput(occurrences.at(-1).end_time);
+  $('eventEndDate').value = dateInput(endOccurrence.end_time);
+  $('eventEnd').value = timeInput(endOccurrence.end_time);
   updateEventEntryType();
   $('eventAttendees').value = record?.expected_attendees || '';
   $('eventPrivacy').value = record?.privacy_level || 'basic';
   $('eventContactPerson').value = record?.contact_person || defaultScheduleContactPerson();
   $('eventContactInfo').value = record?.contact_info || defaultScheduleContactInfo();
   $('eventPublicDescription').value = isBlockRecord ? (record?.reason || '') : (record?.public_description || ''); $('eventPurpose').value = record?.purpose || '';
-  const savedRepeatRule = record?.repeat_rule || record?.recurrence_type || record?.repeat || 'none';
   const repeatUntilValue = record?.repeat_until || record?.recurrence_until || '';
   const savedRepeatUntil = repeatUntilValue ? dateInput(repeatUntilValue) : '';
   if ($('eventRepeat')) $('eventRepeat').value = savedRepeatRule;
@@ -1296,10 +1300,13 @@ function readEventForm() {
   });
   const occurrences = repeatedOccurrences.length ? repeatedOccurrences : (rowOccurrences.length ? rowOccurrences : [fallbackOccurrence]);
   occurrences.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  const savedScheduleType = repeatedOccurrences.length && dateInput(repeatedOccurrences[0].start_time) === dateInput(repeatedOccurrences[0].end_time)
+    ? 'single_day'
+    : schedule_type;
   return syncEventRange({
     ...existing, id: existing?.id || (formMode === 'edit' ? editingScheduleId : '') || createId(), record_type: 'schedule', schedule_source: scheduleSource, created_by_role: scheduleSource, requires_approval: requiresApproval, title: cleanSingleLine($('eventTitle').value), event_type: category?.name || 'Schedule',
     organization_id: org?.id || '', organization_name: org?.organization_name || '', category_id: $('eventCategory').value,
-    venue: cleanSingleLine($('eventVenue').value), schedule_type: occurrences.length > 1 ? 'multi_day' : schedule_type, occurrences,
+    venue: cleanSingleLine($('eventVenue').value), schedule_type: savedScheduleType, occurrences,
     expected_attendees: Number($('eventAttendees').value), public_description: cleanMultiline($('eventPublicDescription').value), purpose: cleanMultiline($('eventPurpose').value),
     contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_rule: repeatRule, repeat_until: effectiveRepeatUntil, recurrence_type: repeatRule, recurrence_until: effectiveRepeatUntil, private_notes: existing?.private_notes || '',
     admin_notes: existing?.admin_notes || '', rejection_reason: resubmitsRejectedSchedule(existing) ? '' : existing?.rejection_reason || '', admin_recommendation: resubmitsRejectedSchedule(existing) ? '' : existing?.admin_recommendation || '',
@@ -1448,6 +1455,10 @@ function approvalStatusForSave(existing) {
 
 function repeatControlValue(id, fallbackId, fallback = '') {
   return $(id)?.value || $(fallbackId)?.value || fallback;
+}
+
+function isRepeatRule(value) {
+  return ['daily', 'weekly', 'monthly', 'yearly'].includes(value);
 }
 
 function addRepeatInterval(date, rule) {
