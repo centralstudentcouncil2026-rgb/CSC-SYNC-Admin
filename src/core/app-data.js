@@ -288,6 +288,7 @@ function normalizeEvent(event) {
   const lastOccurrence = occurrences[occurrences.length - 1] || {};
   const scheduleSource = normalizeScheduleSource(event);
   const approvalStatus = normalizeApprovalStatus(event.approval_status, scheduleSource);
+  const scheduleType = normalizedScheduleType(event, occurrences);
   const now = new Date().toISOString();
   return {
     ...event,
@@ -299,7 +300,7 @@ function normalizeEvent(event) {
     event_status: normalizeEventStatus(event.event_status),
     privacy_level: normalizePrivacyLevel(event.privacy_level, event.private_notes),
     private_notes: String(event.private_notes || '').replace(INTERNAL_PRIVACY_MARKER, '').trim(),
-    schedule_type: event.schedule_type || (occurrences.length > 1 ? 'multi_day' : 'single_day'),
+    schedule_type: scheduleType,
     expected_attendees: normalizedExpectedAttendees(event.expected_attendees),
     schedule_schema_version: isCurrentScheduleRecord({ ...event, privacy_level: normalizePrivacyLevel(event.privacy_level, event.private_notes) }) ? 2 : 1,
     occurrences,
@@ -325,6 +326,20 @@ function normalizeEvent(event) {
     revision_submitted_at: event.revision_submitted_at || '',
     revision_history: Array.isArray(event.revision_history) ? event.revision_history : []
   };
+}
+
+function normalizedScheduleType(event = {}, occurrences = []) {
+  const storedType = String(event.schedule_type || '').trim();
+  const repeatType = String(event.recurrence_type || event.repeat_rule || event.repeat || '').trim().toLowerCase();
+  const repeated = ['daily', 'weekly', 'monthly', 'yearly'].includes(repeatType);
+  const spansDates = occurrences.some((occurrence) => {
+    const startDate = String(occurrence.start_time || occurrence.date || '').slice(0, 10);
+    const endDate = String(occurrence.end_time || occurrence.start_time || occurrence.date || '').slice(0, 10);
+    return startDate && endDate && startDate !== endDate;
+  });
+  if (repeated && !spansDates) return 'single_day';
+  if (storedType) return storedType;
+  return spansDates ? 'multi_day' : 'single_day';
 }
 
 function dedupeEvents(events) {
