@@ -610,8 +610,9 @@ function addRecurrenceInterval(date, rule, anchorDay) {
 
 function expandRecurringOccurrences(event = {}, occurrenceRows = []) {
   const rule = normalizeRecurrenceType(event.recurrence_type || event.repeat_rule || event.repeat);
-  if (rule === 'none' || occurrenceRows.length !== 1) return occurrenceRows;
-  const base = occurrenceRows[0];
+  if (rule === 'none') return occurrenceRows;
+  const sortedRows = [...occurrenceRows].sort((a, b) => new Date(a.start_time || event.start_time || 0) - new Date(b.start_time || event.start_time || 0));
+  const base = sortedRows[0] || occurrenceFromRange(event.start_time, event.end_time);
   const start = safeDate(base.start_time || event.start_time);
   const end = safeDate(base.end_time || event.end_time);
   const untilDate = String(event.recurrence_until || event.repeat_until || '').slice(0, 10);
