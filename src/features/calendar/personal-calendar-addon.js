@@ -94,17 +94,12 @@
     return `${date}T${time || '00:00'}:00`;
   }
 
-  function addInterval(date, type) {
-    const next = new Date(date);
-    if (type === 'daily') next.setDate(next.getDate() + 1);
-    else if (type === 'weekly') next.setDate(next.getDate() + 7);
-    else if (type === 'monthly') next.setMonth(next.getMonth() + 1);
-    else if (type === 'yearly') next.setFullYear(next.getFullYear() + 1);
-    return next;
+  function pad(value) {
+    return String(value).padStart(2, '0');
   }
 
   function isoDate(date) {
-    return date.toISOString().slice(0, 10);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
   function defaultRecurrenceUntil(startDate, recurrenceType) {
@@ -120,19 +115,16 @@
     const finalDate = endDate || startDate;
     const firstStart = new Date(datetime(startDate, startTime));
     const firstEnd = new Date(datetime(finalDate, endTime));
-    const duration = Math.max(30 * 60 * 1000, firstEnd - firstStart);
+    if (Number.isNaN(firstStart.getTime()) || Number.isNaN(firstEnd.getTime()) || firstEnd <= firstStart) return [];
     if (type === 'none') {
-      return [{ id: createId(), date: startDate, start_time: firstStart.toISOString(), end_time: firstEnd.toISOString() }];
+      return [{ id: createId(), date: startDate, start_time: datetime(startDate, startTime), end_time: datetime(finalDate, endTime) }];
     }
-    const until = new Date(datetime(recurrenceUntil || startDate, endTime));
-    const rows = [];
-    let cursor = new Date(firstStart);
-    for (let index = 0; index < 730 && cursor <= until; index += 1) {
-      const end = new Date(cursor.getTime() + duration);
-      rows.push({ id: createId(), date: isoDate(cursor), start_time: cursor.toISOString(), end_time: end.toISOString() });
-      cursor = addInterval(cursor, type);
-    }
-    return rows;
+    return window.CSC_RECURRENCE?.buildRecurringOccurrences?.({
+      start_time: firstStart,
+      end_time: firstEnd,
+      recurrence_type: type,
+      recurrence_until: recurrenceUntil || startDate
+    }) || [];
   }
 
   function recurrenceLabel(value) {
@@ -1001,7 +993,7 @@
       approval_status: 'approved',
       event_status: 'planned',
       start_time: occurrences[0].start_time,
-      end_time: occurrences[occurrences.length - 1].end_time,
+      end_time: recurrenceType === 'none' ? occurrences[occurrences.length - 1].end_time : occurrences[0].end_time,
       updated_at: new Date().toISOString()
     };
   }

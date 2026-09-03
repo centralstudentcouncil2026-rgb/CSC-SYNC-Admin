@@ -1,4 +1,4 @@
-import { ACCOUNT_PRESETS, ACCOUNT_TYPES, ACTIVITY_STATUS_OPTIONS, createId } from './app-data.js?v=20260625-status-sync-v1';
+import { ACCOUNT_PRESETS, ACCOUNT_TYPES, ACTIVITY_STATUS_OPTIONS, buildRecurringOccurrences, createId, inferRecurrenceTypeFromOccurrences } from './app-data.js?v=20260625-status-sync-v1';
 import { authenticate, clearSession, decideAccountRequest, deleteRecord, loadStore, requestAccount, saveConcernRecord, saveStore } from './supabase-storage.js?v=20260625-concerns-sync-v1';
 import {
   APPROVAL_STATUSES, EVENT_STATUSES, activeAnnouncements, canApproveEvents, canCreateEvents,
@@ -1504,52 +1504,10 @@ function repeatUntilFromOccurrences(occurrences = []) {
 }
 
 function inferRepeatRuleFromOccurrences(record = {}, occurrences = []) {
-  const rows = [...(occurrences || [])]
-    .filter((item) => item?.start_time && item?.end_time && sameLocalDay(item.start_time, item.end_time))
-    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-  if (rows.length < 2) return 'none';
-  const starts = rows.map((item) => new Date(item.start_time));
-  if (starts.some((date) => Number.isNaN(date.getTime()))) return 'none';
-  const dayGaps = starts.slice(1).map((date, index) => Math.round((date - starts[index]) / 86400000));
-  if (dayGaps.every((gap) => gap === 1)) return 'daily';
-  if (dayGaps.every((gap) => gap === 7)) return 'weekly';
-  const monthly = starts.slice(1).every((date, index) => {
-    const previous = starts[index];
-    const expectedMonth = previous.getMonth() + 1;
-    const expectedYear = previous.getFullYear() + Math.floor(expectedMonth / 12);
-    const month = expectedMonth % 12;
-    const day = Math.min(starts[0].getDate(), daysInMonth(expectedYear, month));
-    return date.getFullYear() === expectedYear && date.getMonth() === month && date.getDate() === day;
-  });
-  if (monthly) return 'monthly';
-  const yearly = starts.slice(1).every((date, index) => {
-    const previous = starts[index];
-    const expectedYear = previous.getFullYear() + 1;
-    const day = Math.min(starts[0].getDate(), daysInMonth(expectedYear, starts[0].getMonth()));
-    return date.getFullYear() === expectedYear && date.getMonth() === starts[0].getMonth() && date.getDate() === day;
-  });
-  if (yearly) return 'yearly';
+  const rows = [...(occurrences || [])].filter((item) => item?.start_time && item?.end_time && sameLocalDay(item.start_time, item.end_time));
+  const inferred = inferRecurrenceTypeFromOccurrences(record, rows);
+  if (inferred !== 'none') return inferred;
   return record?.schedule_type === 'single_day' ? 'weekly' : 'none';
-}
-
-function daysInMonth(year, monthIndex) {
-  return new Date(year, monthIndex + 1, 0).getDate();
-}
-
-function addRepeatInterval(date, rule, anchorDay = date.getDate()) {
-  const next = new Date(date);
-  if (rule === 'daily') next.setDate(next.getDate() + 1);
-  else if (rule === 'weekly') next.setDate(next.getDate() + 7);
-  else if (rule === 'monthly') {
-    const monthIndex = next.getMonth() + 1;
-    const year = next.getFullYear() + Math.floor(monthIndex / 12);
-    const month = monthIndex % 12;
-    next.setFullYear(year, month, Math.min(anchorDay, daysInMonth(year, month)));
-  } else if (rule === 'yearly') {
-    const year = next.getFullYear() + 1;
-    next.setFullYear(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
-  }
-  return next;
 }
 
 function defaultRepeatUntil(startDate, repeatRule) {
@@ -1566,28 +1524,25 @@ function buildRepeatedOccurrences({ existing, startDate, endDate, startTime, end
   const firstStart = new Date(localIso(startDate, startTime));
   const firstEnd = new Date(localIso(endDate || startDate, endTime));
   if (Number.isNaN(firstStart.getTime()) || Number.isNaN(firstEnd.getTime()) || firstEnd <= firstStart) return [];
-  const until = new Date(localIso(repeatUntil || startDate, endTime));
-  if (Number.isNaN(until.getTime()) || until < firstStart) return [];
-  const duration = firstEnd.getTime() - firstStart.getTime();
-  const anchorDay = firstStart.getDate();
   const previous = Array.isArray(existing?.occurrences) ? existing.occurrences : [];
-  const rows = [];
-  for (let cursor = new Date(firstStart), index = 0; index < 730 && cursor <= until; index += 1) {
-    const end = new Date(cursor.getTime() + duration);
-    rows.push({
-      id: previous[index]?.id || createId(),
-      date: dateInput(cursor),
-      start_time: localIso(dateInput(cursor), timeInput(cursor)),
-      end_time: localIso(dateInput(end), timeInput(end))
-    });
-    cursor = addRepeatInterval(cursor, rule, anchorDay);
-  }
-  return rows;
+  return buildRecurringOccurrences({
+    start_time: firstStart,
+    end_time: firstEnd,
+    recurrence_type: rule,
+    recurrence_until: repeatUntil || startDate,
+    previousOccurrences: previous
+  });
 }
 
 function syncEventRange(event) {
   const occurrences = [...event.occurrences].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-  return { ...event, occurrences, start_time: occurrences[0]?.start_time || '', end_time: occurrences.at(-1)?.end_time || '' };
+  const repeatRule = normalizedRepeatRule(event.recurrence_type);
+  return {
+    ...event,
+    occurrences,
+    start_time: occurrences[0]?.start_time || '',
+    end_time: repeatRule === 'none' ? (occurrences.at(-1)?.end_time || '') : (occurrences[0]?.end_time || '')
+  };
 }
 
 function renderOccurrenceRows(occurrences) {
