@@ -335,7 +335,7 @@ function normalizeEvent(event) {
 
 function normalizedScheduleType(event = {}, occurrences = []) {
   const storedType = String(event.schedule_type || '').trim();
-  const repeatType = String(event.recurrence_type || event.repeat_rule || event.repeat || '').trim().toLowerCase();
+  const repeatType = normalizeRecurrenceType(event.recurrence_type || event.repeat_rule || event.repeat);
   const repeated = ['daily', 'weekly', 'monthly', 'yearly'].includes(repeatType);
   const spansDates = occurrences.some((occurrence) => {
     const startDate = String(occurrence.start_time || occurrence.date || '').slice(0, 10);
@@ -551,8 +551,24 @@ function normalizeNotification(notification = {}) {
 }
 
 function normalizeRecurrenceType(value) {
-  const recurrenceType = String(value || '').trim().toLowerCase();
-  return RECURRENCE_TYPES.includes(recurrenceType) ? recurrenceType : 'none';
+  const recurrenceType = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  const aliases = {
+    daily: 'daily',
+    'every day': 'daily',
+    weekly: 'weekly',
+    'every week': 'weekly',
+    monthly: 'monthly',
+    'every month': 'monthly',
+    yearly: 'yearly',
+    annually: 'yearly',
+    'every year': 'yearly',
+    none: 'none',
+    never: 'none',
+    'does not repeat': 'none',
+    'do not repeat': 'none',
+    'not repeat': 'none'
+  };
+  return aliases[recurrenceType] || 'none';
 }
 
 function safeDate(value) {

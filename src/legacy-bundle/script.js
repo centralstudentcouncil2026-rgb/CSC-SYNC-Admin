@@ -1225,20 +1225,29 @@ function openEventModal(range, record = null) {
   const occurrences = isBlockRecord
     ? [{ id: record?.id || createId(), date: dateInput(record?.start_time || range.start), start_time: record?.start_time || calendarFloatingIso(range.start), end_time: record?.end_time || calendarFloatingIso(range.end) }]
     : (record ? eventOccurrences(record) : range.occurrences || [{ id: createId(), date: dateInput(range.start), start_time: calendarFloatingIso(range.start), end_time: calendarFloatingIso(range.end) }]);
-  const spansMultipleDates = occurrences.length > 1 || dateInput(occurrences[0]?.start_time) !== dateInput(occurrences.at(-1)?.end_time);
-  $('eventScheduleType').value = isBlockRecord ? (record?.block_type === 'whole_day' ? 'single_day' : record?.block_type || (spansMultipleDates ? 'multi_day' : 'single_day')) : (record?.schedule_type || (spansMultipleDates ? 'multi_day' : 'single_day'));
+  const savedRepeatRule = normalizedRepeatRule(record?.repeat_rule || record?.recurrence_type || record?.repeat || inferRepeatRuleFromOccurrences(record, occurrences));
+  const repeatedSchedule = isRepeatRule(savedRepeatRule);
+  const occurrenceSpansDates = occurrences.some((occurrence) => dateInput(occurrence.start_time) !== dateInput(occurrence.end_time));
+  const spansMultipleDates = occurrenceSpansDates || (!repeatedSchedule && occurrences.length > 1);
+  const formScheduleType = repeatedSchedule && !occurrenceSpansDates ? 'single_day' : (record?.schedule_type || (spansMultipleDates ? 'multi_day' : 'single_day'));
+  const endOccurrence = repeatedSchedule ? occurrences[0] : occurrences.at(-1);
+  $('eventScheduleType').value = isBlockRecord ? (record?.block_type === 'whole_day' ? 'single_day' : record?.block_type || (spansMultipleDates ? 'multi_day' : 'single_day')) : formScheduleType;
   $('eventDate').value = dateInput(occurrences[0].start_time);
   $('eventStart').value = timeInput(occurrences[0].start_time);
-  $('eventEndDate').value = dateInput(occurrences.at(-1).end_time);
-  $('eventEnd').value = timeInput(occurrences.at(-1).end_time);
+  $('eventEndDate').value = dateInput(endOccurrence.end_time);
+  $('eventEnd').value = timeInput(endOccurrence.end_time);
   updateEventEntryType();
   $('eventAttendees').value = record?.expected_attendees || '';
   $('eventPrivacy').value = record?.privacy_level || 'basic';
   $('eventContactPerson').value = record?.contact_person || defaultScheduleContactPerson();
   $('eventContactInfo').value = record?.contact_info || defaultScheduleContactInfo();
   $('eventPublicDescription').value = isBlockRecord ? (record?.reason || '') : (record?.public_description || ''); $('eventPurpose').value = record?.purpose || '';
-  if ($('eventRepeat')) $('eventRepeat').value = record?.repeat_rule || record?.repeat || 'none';
-  if ($('eventRepeatUntil')) $('eventRepeatUntil').value = dateInput(record?.repeat_until || '');
+  const repeatUntilValue = record?.repeat_until || record?.recurrence_until || (savedRepeatRule !== 'none' ? repeatUntilFromOccurrences(occurrences) : '');
+  const savedRepeatUntil = repeatUntilValue ? dateInput(repeatUntilValue) : '';
+  if ($('eventRepeat')) $('eventRepeat').value = savedRepeatRule;
+  if ($('eventRepeatUntil')) $('eventRepeatUntil').value = savedRepeatUntil;
+  if ($('eventRecurrenceType')) $('eventRecurrenceType').value = savedRepeatRule;
+  if ($('eventRecurrenceUntil')) $('eventRecurrenceUntil').value = savedRepeatUntil;
   $('deleteEventButton').hidden = isBlockRecord ? !canManageBlockRecord(record) : !canDeleteEvent(state.store, record);
   $('cancelEventButton').hidden = isBlockRecord || !record || !canEditEvent(state.store, record) || ['cancelled', 'disabled', 'completed'].includes(record.event_status);
   openDialog('eventModal');
@@ -1281,6 +1290,9 @@ function readEventForm() {
   const category = state.store.categories.find((item) => item.id === $('eventCategory').value);
   const schedule_type = $('eventScheduleType').value;
   const endDate = schedule_type === 'multi_day' ? $('eventEndDate').value : $('eventDate').value;
+  const repeatRule = repeatControlValue('eventRepeat', 'eventRecurrenceType', existing?.repeat_rule || existing?.recurrence_type || 'none');
+  const repeatUntil = repeatControlValue('eventRepeatUntil', 'eventRecurrenceUntil', existing?.repeat_until || existing?.recurrence_until || '');
+  const effectiveRepeatUntil = repeatRule === 'none' ? '' : (repeatUntil || defaultRepeatUntil($('eventDate').value, repeatRule));
   const rowOccurrences = readOccurrenceRows().filter((item) => item.date && item.start_time && item.end_time);
   const fallbackOccurrence = {
     id: existing?.occurrences?.[0]?.id || createId(),
@@ -1288,14 +1300,26 @@ function readEventForm() {
     start_time: localIso($('eventDate').value, $('eventStart').value),
     end_time: localIso(endDate, $('eventEnd').value)
   };
-  const occurrences = rowOccurrences.length ? rowOccurrences : [fallbackOccurrence];
+  const repeatedOccurrences = buildRepeatedOccurrences({
+    existing,
+    startDate: $('eventDate').value,
+    endDate,
+    startTime: $('eventStart').value,
+    endTime: $('eventEnd').value,
+    repeatRule,
+    repeatUntil: effectiveRepeatUntil
+  });
+  const occurrences = repeatedOccurrences.length ? repeatedOccurrences : (rowOccurrences.length ? rowOccurrences : [fallbackOccurrence]);
   occurrences.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  const savedScheduleType = repeatedOccurrences.length && dateInput(repeatedOccurrences[0].start_time) === dateInput(repeatedOccurrences[0].end_time)
+    ? 'single_day'
+    : schedule_type;
   return syncEventRange({
     ...existing, id: existing?.id || (formMode === 'edit' ? editingScheduleId : '') || createId(), record_type: 'schedule', schedule_source: scheduleSource, created_by_role: scheduleSource, requires_approval: requiresApproval, title: cleanSingleLine($('eventTitle').value), event_type: category?.name || 'Schedule',
     organization_id: org?.id || '', organization_name: org?.organization_name || '', category_id: $('eventCategory').value,
-    venue: cleanSingleLine($('eventVenue').value), schedule_type, occurrences,
+    venue: cleanSingleLine($('eventVenue').value), schedule_type: savedScheduleType, occurrences,
     expected_attendees: Number($('eventAttendees').value), public_description: cleanMultiline($('eventPublicDescription').value), purpose: cleanMultiline($('eventPurpose').value),
-    contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_rule: $('eventRepeat')?.value || existing?.repeat_rule || 'none', repeat_until: $('eventRepeatUntil')?.value || existing?.repeat_until || '', private_notes: existing?.private_notes || '',
+    contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_rule: repeatRule, repeat_until: effectiveRepeatUntil, recurrence_type: repeatRule, recurrence_until: effectiveRepeatUntil, private_notes: existing?.private_notes || '',
     admin_notes: existing?.admin_notes || '', rejection_reason: resubmitsRejectedSchedule(existing) ? '' : existing?.rejection_reason || '', admin_recommendation: resubmitsRejectedSchedule(existing) ? '' : existing?.admin_recommendation || '',
     approval_date: resubmitsRejectedSchedule(existing) ? '' : existing?.approval_date || '', approved_by: existing?.approved_by || '', reviewed_by: existing?.reviewed_by || '', notification_status: existing?.notification_status || '',
     revision_of: existing?.revision_of || '', original_schedule_id: existing?.original_schedule_id || '', revision_status: existing?.revision_status || '',
@@ -1438,6 +1462,126 @@ function approvalStatusForSave(existing) {
   if (isSuperAdmin(state.store)) return 'approved';
   if (resubmitsRejectedSchedule(existing)) return 'pending';
   return existing?.approval_status || 'pending';
+}
+
+function repeatControlValue(id, fallbackId, fallback = '') {
+  return normalizedRepeatRule($(id)?.value || $(fallbackId)?.value || fallback);
+}
+
+function normalizedRepeatRule(value) {
+  const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  const aliases = {
+    daily: 'daily',
+    'every day': 'daily',
+    weekly: 'weekly',
+    'every week': 'weekly',
+    monthly: 'monthly',
+    'every month': 'monthly',
+    yearly: 'yearly',
+    annually: 'yearly',
+    'every year': 'yearly',
+    none: 'none',
+    never: 'none',
+    'does not repeat': 'none',
+    'do not repeat': 'none',
+    'not repeat': 'none'
+  };
+  return aliases[text] || 'none';
+}
+
+function isRepeatRule(value) {
+  return ['daily', 'weekly', 'monthly', 'yearly'].includes(normalizedRepeatRule(value));
+}
+
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addRepeatInterval(date, rule, anchorDay = date.getDate()) {
+  const next = new Date(date);
+  if (rule === 'daily') next.setDate(next.getDate() + 1);
+  else if (rule === 'weekly') next.setDate(next.getDate() + 7);
+  else if (rule === 'monthly') {
+    const monthIndex = next.getMonth() + 1;
+    const year = next.getFullYear() + Math.floor(monthIndex / 12);
+    const month = monthIndex % 12;
+    next.setFullYear(year, month, Math.min(anchorDay, daysInMonth(year, month)));
+  } else if (rule === 'yearly') {
+    const year = next.getFullYear() + 1;
+    next.setFullYear(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
+  }
+  return next;
+}
+
+function defaultRepeatUntil(startDate, repeatRule) {
+  if (!startDate || repeatRule === 'none') return '';
+  const until = new Date(localIso(startDate, '00:00'));
+  if (Number.isNaN(until.getTime())) return '';
+  until.setFullYear(until.getFullYear() + 1);
+  return dateInput(until);
+}
+
+function sameLocalDay(start, end) {
+  return dateInput(start) === dateInput(end);
+}
+
+function repeatUntilFromOccurrences(occurrences = []) {
+  const last = [...occurrences].sort((a, b) => new Date(a.start_time) - new Date(b.start_time)).at(-1);
+  return last?.start_time ? dateInput(last.start_time) : '';
+}
+
+function inferRepeatRuleFromOccurrences(record = {}, occurrences = []) {
+  const rows = [...(occurrences || [])]
+    .filter((item) => item?.start_time && item?.end_time && sameLocalDay(item.start_time, item.end_time))
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  if (rows.length < 2) return 'none';
+  const starts = rows.map((item) => new Date(item.start_time));
+  if (starts.some((date) => Number.isNaN(date.getTime()))) return 'none';
+  const dayGaps = starts.slice(1).map((date, index) => Math.round((date - starts[index]) / 86400000));
+  if (dayGaps.every((gap) => gap === 1)) return 'daily';
+  if (dayGaps.every((gap) => gap === 7)) return 'weekly';
+  const monthly = starts.slice(1).every((date, index) => {
+    const previous = starts[index];
+    const expectedMonth = previous.getMonth() + 1;
+    const expectedYear = previous.getFullYear() + Math.floor(expectedMonth / 12);
+    const month = expectedMonth % 12;
+    const day = Math.min(starts[0].getDate(), daysInMonth(expectedYear, month));
+    return date.getFullYear() === expectedYear && date.getMonth() === month && date.getDate() === day;
+  });
+  if (monthly) return 'monthly';
+  const yearly = starts.slice(1).every((date, index) => {
+    const previous = starts[index];
+    const expectedYear = previous.getFullYear() + 1;
+    const day = Math.min(starts[0].getDate(), daysInMonth(expectedYear, starts[0].getMonth()));
+    return date.getFullYear() === expectedYear && date.getMonth() === starts[0].getMonth() && date.getDate() === day;
+  });
+  if (yearly) return 'yearly';
+  return record?.schedule_type === 'single_day' ? 'weekly' : 'none';
+}
+
+function buildRepeatedOccurrences({ existing, startDate, endDate, startTime, endTime, repeatRule, repeatUntil }) {
+  const rule = normalizedRepeatRule(repeatRule);
+  if (rule === 'none' || !startDate || !startTime || !endTime) return [];
+  const firstStart = new Date(localIso(startDate, startTime));
+  const firstEnd = new Date(localIso(endDate || startDate, endTime));
+  if (Number.isNaN(firstStart.getTime()) || Number.isNaN(firstEnd.getTime()) || firstEnd <= firstStart) return [];
+  const until = new Date(localIso(repeatUntil || startDate, endTime));
+  if (Number.isNaN(until.getTime()) || until < firstStart) return [];
+  const duration = firstEnd.getTime() - firstStart.getTime();
+  const anchorDay = firstStart.getDate();
+  const previous = Array.isArray(existing?.occurrences) ? existing.occurrences : [];
+  const rows = [];
+  for (let cursor = new Date(firstStart), index = 0; index < 730 && cursor <= until; index += 1) {
+    const end = new Date(cursor.getTime() + duration);
+    rows.push({
+      id: previous[index]?.id || createId(),
+      date: dateInput(cursor),
+      start_time: localIso(dateInput(cursor), timeInput(cursor)),
+      end_time: localIso(dateInput(end), timeInput(end))
+    });
+    cursor = addRepeatInterval(cursor, rule, anchorDay);
+  }
+  return rows;
 }
 
 function syncEventRange(event) {

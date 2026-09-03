@@ -2132,55 +2132,6 @@
     }
   }
 
-  function enhancePostedScheduleSubmit(event) {
-    if (event.target?.id !== 'eventForm' || !personalMode || event.target?.dataset?.personalSchedule !== '1') return;
-    const recurrenceType = document.getElementById('eventRecurrenceType')?.value || 'none';
-    if (recurrenceType === 'none') return;
-    const title = document.getElementById('eventTitle')?.value?.trim();
-    const startDate = document.getElementById('eventDate')?.value;
-    const endDate = document.getElementById('eventEndDate')?.value || startDate;
-    const startTime = document.getElementById('eventStart')?.value;
-    const endTime = document.getElementById('eventEnd')?.value;
-    const recurrenceUntil = document.getElementById('eventRecurrenceUntil')?.value || defaultRecurrenceUntil(startDate, recurrenceType);
-    const occurrences = buildOccurrences({ startDate, startTime, endDate, endTime, recurrenceType, recurrenceUntil });
-    if (!occurrences.length) return;
-    window.setTimeout(() => patchRecentSchedule({ title, occurrences, recurrenceType, recurrenceUntil }), 1000);
-    window.setTimeout(() => patchRecentSchedule({ title, occurrences, recurrenceType, recurrenceUntil }), 2600);
-  }
-
-  async function patchRecentSchedule({ title, occurrences, recurrenceType, recurrenceUntil }) {
-    const uid = currentUserId();
-    if (!uid || !title) return;
-    const encodedTitle = encodeURIComponent(title);
-    const rows = await rest(`/rest/v1/${TABLE}?select=id,title,created_by,updated_at&record_type=eq.${PERSONAL_RECORD_TYPE}&title=eq.${encodedTitle}&created_by=eq.${encodeURIComponent(uid)}&order=updated_at.desc&limit=1`, {}, 'return=minimal').catch(() => []);
-    const row = Array.isArray(rows) ? rows[0] : null;
-    if (!row?.id) return;
-    await rest(`/rest/v1/${TABLE}?id=eq.${encodeURIComponent(row.id)}&record_type=eq.${PERSONAL_RECORD_TYPE}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        schedule_type: occurrences.length > 1 ? 'multi_day' : 'single_day',
-        recurrence_type: recurrenceType,
-        recurrence_until: recurrenceUntil || null,
-        occurrences,
-        start_time: occurrences[0].start_time,
-        end_time: occurrences[occurrences.length - 1].end_time,
-        updated_at: new Date().toISOString()
-      })
-    }, 'return=minimal').catch(() => {});
-    const storeEvent = (window.CONNECT_STATE?.store?.events || []).find((event) => event.id === row.id);
-    if (storeEvent) {
-      Object.assign(storeEvent, {
-        schedule_type: occurrences.length > 1 ? 'multi_day' : 'single_day',
-        recurrence_type: recurrenceType,
-        recurrence_until: recurrenceUntil || '',
-        occurrences,
-        start_time: occurrences[0].start_time,
-        end_time: occurrences[occurrences.length - 1].end_time
-      });
-      window.CONNECT_STATE?.calendar?.refetchEvents?.();
-    }
-  }
-
   function bind() {
     const modal = document.getElementById('eventModal');
     if (modal && modal.dataset.personalCloseBound !== '1') {
@@ -2285,7 +2236,6 @@
       }
     }, true);
     document.addEventListener('submit', savePersonalEvent, true);
-    document.addEventListener('submit', enhancePostedScheduleSubmit, true);
     document.addEventListener('input', (event) => {
       if (personalMode && event.target?.id === 'personalCalendarHeaderSearch') void searchPublic();
     });
