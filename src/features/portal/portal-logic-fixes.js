@@ -36,11 +36,6 @@ function plfUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
 }
 
-function plfRepeatRule(value) {
-  const rule = String(value || '').trim().toLowerCase();
-  return ['daily', 'weekly', 'monthly', 'yearly'].includes(rule) ? rule : null;
-}
-
 function plfHeaders() {
   const key = window.SUPABASE_CONFIG?.publishableKey || window.SUPABASE_CONFIG?.anonKey || window.SUPABASE_CONFIG?.apiKey || window.SUPABASE_CONFIG?.apikey || '';
   return { apikey: key, Authorization: `Bearer ${plfSession()?.access_token || key}`, 'Content-Type': 'application/json' };
