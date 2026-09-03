@@ -290,6 +290,7 @@ function normalizeEvent(event) {
   const lastOccurrence = occurrences[occurrences.length - 1] || {};
   const scheduleSource = normalizeScheduleSource(event);
   const approvalStatus = normalizeApprovalStatus(event.approval_status, scheduleSource);
+  const recurrenceType = normalizeRecurrenceType(event.recurrence_type);
   const scheduleType = normalizedScheduleType(event, occurrences);
   const now = new Date().toISOString();
   return {
@@ -302,6 +303,7 @@ function normalizeEvent(event) {
     event_status: normalizeEventStatus(event.event_status),
     privacy_level: normalizePrivacyLevel(event.privacy_level, event.private_notes),
     private_notes: String(event.private_notes || '').replace(INTERNAL_PRIVACY_MARKER, '').trim(),
+    recurrence_type: recurrenceType === 'none' ? '' : recurrenceType,
     schedule_type: scheduleType,
     expected_attendees: normalizedExpectedAttendees(event.expected_attendees),
     schedule_schema_version: isCurrentScheduleRecord({ ...event, privacy_level: normalizePrivacyLevel(event.privacy_level, event.private_notes) }) ? 2 : 1,
@@ -335,7 +337,7 @@ function normalizeEvent(event) {
 
 function normalizedScheduleType(event = {}, occurrences = []) {
   const storedType = String(event.schedule_type || '').trim();
-  const repeatType = normalizeRecurrenceType(event.recurrence_type || event.repeat_rule || event.repeat);
+  const repeatType = normalizeRecurrenceType(event.recurrence_type);
   const repeated = ['daily', 'weekly', 'monthly', 'yearly'].includes(repeatType);
   const spansDates = occurrences.some((occurrence) => {
     const startDate = String(occurrence.start_time || occurrence.date || '').slice(0, 10);
@@ -609,7 +611,7 @@ function addRecurrenceInterval(date, rule, anchorDay) {
 }
 
 function expandRecurringOccurrences(event = {}, occurrenceRows = []) {
-  const rule = normalizeRecurrenceType(event.recurrence_type || event.repeat_rule || event.repeat);
+  const rule = normalizeRecurrenceType(event.recurrence_type);
   if (rule === 'none') return occurrenceRows;
   const sortedRows = [...occurrenceRows].sort((a, b) => new Date(a.start_time || event.start_time || 0) - new Date(b.start_time || event.start_time || 0));
   const base = sortedRows[0] || occurrenceFromRange(event.start_time, event.end_time);

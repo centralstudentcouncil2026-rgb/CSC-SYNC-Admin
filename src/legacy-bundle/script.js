@@ -1226,7 +1226,7 @@ function openEventModal(range, record = null) {
   const occurrences = isBlockRecord
     ? [{ id: record?.id || createId(), date: dateInput(record?.start_time || range.start), start_time: record?.start_time || calendarFloatingIso(range.start), end_time: record?.end_time || calendarFloatingIso(range.end) }]
     : (record ? eventOccurrences(record) : range.occurrences || [{ id: createId(), date: dateInput(range.start), start_time: calendarFloatingIso(range.start), end_time: calendarFloatingIso(range.end) }]);
-  const savedRepeatRule = normalizedRepeatRule(record?.repeat_rule || record?.recurrence_type || record?.repeat || inferRepeatRuleFromOccurrences(record, occurrences));
+  const savedRepeatRule = normalizedRepeatRule(record?.recurrence_type || inferRepeatRuleFromOccurrences(record, occurrences));
   const repeatedSchedule = isRepeatRule(savedRepeatRule);
   const occurrenceSpansDates = occurrences.some((occurrence) => dateInput(occurrence.start_time) !== dateInput(occurrence.end_time));
   const spansMultipleDates = occurrenceSpansDates || (!repeatedSchedule && occurrences.length > 1);
@@ -1243,7 +1243,7 @@ function openEventModal(range, record = null) {
   $('eventContactPerson').value = record?.contact_person || defaultScheduleContactPerson();
   $('eventContactInfo').value = record?.contact_info || defaultScheduleContactInfo();
   $('eventPublicDescription').value = isBlockRecord ? (record?.reason || '') : (record?.public_description || ''); $('eventPurpose').value = record?.purpose || '';
-  const repeatUntilValue = record?.repeat_until || record?.recurrence_until || (savedRepeatRule !== 'none' ? repeatUntilFromOccurrences(occurrences) : '');
+  const repeatUntilValue = record?.recurrence_until || record?.repeat_until || (savedRepeatRule !== 'none' ? repeatUntilFromOccurrences(occurrences) : '');
   const savedRepeatUntil = repeatUntilValue ? dateInput(repeatUntilValue) : '';
   if ($('eventRepeat')) $('eventRepeat').value = savedRepeatRule;
   if ($('eventRepeatUntil')) $('eventRepeatUntil').value = savedRepeatUntil;
@@ -1291,7 +1291,7 @@ function readEventForm() {
   const category = state.store.categories.find((item) => item.id === $('eventCategory').value);
   const schedule_type = $('eventScheduleType').value;
   const endDate = schedule_type === 'multi_day' ? $('eventEndDate').value : $('eventDate').value;
-  const repeatRule = repeatControlValue('eventRepeat', 'eventRecurrenceType', existing?.repeat_rule || existing?.recurrence_type || 'none');
+  const repeatRule = repeatControlValue('eventRepeat', 'eventRecurrenceType', existing?.recurrence_type || 'none');
   const repeatUntil = repeatControlValue('eventRepeatUntil', 'eventRecurrenceUntil', existing?.repeat_until || existing?.recurrence_until || '');
   const effectiveRepeatUntil = repeatRule === 'none' ? '' : (repeatUntil || defaultRepeatUntil($('eventDate').value, repeatRule));
   const rowOccurrences = readOccurrenceRows().filter((item) => item.date && item.start_time && item.end_time);
@@ -1320,7 +1320,7 @@ function readEventForm() {
     organization_id: org?.id || '', organization_name: org?.organization_name || '', category_id: $('eventCategory').value,
     venue: cleanSingleLine($('eventVenue').value), schedule_type: savedScheduleType, occurrences,
     expected_attendees: Number($('eventAttendees').value), public_description: cleanMultiline($('eventPublicDescription').value), purpose: cleanMultiline($('eventPurpose').value),
-    contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_rule: repeatRule, repeat_until: effectiveRepeatUntil, recurrence_type: repeatRule, recurrence_until: effectiveRepeatUntil, private_notes: existing?.private_notes || '',
+    contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_until: effectiveRepeatUntil, recurrence_type: repeatRule, recurrence_until: effectiveRepeatUntil, private_notes: existing?.private_notes || '',
     admin_notes: existing?.admin_notes || '', rejection_reason: resubmitsRejectedSchedule(existing) ? '' : existing?.rejection_reason || '', admin_recommendation: resubmitsRejectedSchedule(existing) ? '' : existing?.admin_recommendation || '',
     approval_date: resubmitsRejectedSchedule(existing) ? '' : existing?.approval_date || '', approved_by: existing?.approved_by || '', reviewed_by: existing?.reviewed_by || '', notification_status: existing?.notification_status || '',
     revision_of: existing?.revision_of || '', original_schedule_id: existing?.original_schedule_id || '', revision_status: existing?.revision_status || '',
@@ -1707,7 +1707,7 @@ function scheduleSummary(event) {
 }
 
 function recurrenceDetailSummary(record, occurrences = []) {
-  const rule = normalizedRepeatRule(record?.recurrence_type || record?.repeat_rule || record?.repeat);
+  const rule = normalizedRepeatRule(record?.recurrence_type);
   if (!isRepeatRule(rule)) return '';
   const labels = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
   const until = record.recurrence_until || record.repeat_until || repeatUntilFromOccurrences(occurrences);

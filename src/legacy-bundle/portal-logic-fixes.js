@@ -99,7 +99,7 @@ function plfCleanSchedulePayload(row, status, recommendation) {
 }
 
 function plfFullSchedulePayload(row) {
-  const repeatRule = row.recurrence_type || row.repeat_rule || null;
+  const recurrenceType = row.recurrence_type || null;
   const repeatUntil = row.recurrence_until || row.repeat_until || null;
   return {
     category_id: row.category_id || null,
@@ -115,9 +115,8 @@ function plfFullSchedulePayload(row) {
     contact_info: row.contact_info || null,
     public_description: row.public_description || null,
     purpose: row.purpose || null,
-    repeat_rule: repeatRule,
     repeat_until: repeatUntil,
-    recurrence_type: repeatRule,
+    recurrence_type: recurrenceType,
     recurrence_until: repeatUntil,
     approval_status: 'approved',
     admin_recommendation: row.admin_recommendation || null,
