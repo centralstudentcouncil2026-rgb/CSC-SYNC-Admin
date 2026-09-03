@@ -1462,12 +1462,23 @@ function isRepeatRule(value) {
   return ['daily', 'weekly', 'monthly', 'yearly'].includes(value);
 }
 
-function addRepeatInterval(date, rule) {
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addRepeatInterval(date, rule, anchorDay = date.getDate()) {
   const next = new Date(date);
   if (rule === 'daily') next.setDate(next.getDate() + 1);
   else if (rule === 'weekly') next.setDate(next.getDate() + 7);
-  else if (rule === 'monthly') next.setMonth(next.getMonth() + 1);
-  else if (rule === 'yearly') next.setFullYear(next.getFullYear() + 1);
+  else if (rule === 'monthly') {
+    const monthIndex = next.getMonth() + 1;
+    const year = next.getFullYear() + Math.floor(monthIndex / 12);
+    const month = monthIndex % 12;
+    next.setFullYear(year, month, Math.min(anchorDay, daysInMonth(year, month)));
+  } else if (rule === 'yearly') {
+    const year = next.getFullYear() + 1;
+    next.setFullYear(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
+  }
   return next;
 }
 
@@ -1488,6 +1499,7 @@ function buildRepeatedOccurrences({ existing, startDate, endDate, startTime, end
   const until = new Date(localIso(repeatUntil || startDate, endTime));
   if (Number.isNaN(until.getTime()) || until < firstStart) return [];
   const duration = firstEnd.getTime() - firstStart.getTime();
+  const anchorDay = firstStart.getDate();
   const previous = Array.isArray(existing?.occurrences) ? existing.occurrences : [];
   const rows = [];
   for (let cursor = new Date(firstStart), index = 0; index < 730 && cursor <= until; index += 1) {
@@ -1498,7 +1510,7 @@ function buildRepeatedOccurrences({ existing, startDate, endDate, startTime, end
       start_time: localIso(dateInput(cursor), timeInput(cursor)),
       end_time: localIso(dateInput(end), timeInput(end))
     });
-    cursor = addRepeatInterval(cursor, rule);
+    cursor = addRepeatInterval(cursor, rule, anchorDay);
   }
   return rows;
 }
@@ -1851,6 +1863,7 @@ async function saveEvent(candidate) {
   const canSave = existing ? canEditEvent(state.store, existing) : canCreateEvents(state.store);
   if (!requirePermission(canSave, existing ? 'You cannot edit this event.' : 'You cannot create schedules.')) return false;
   if (existing && isManager(state.store) && existing.approval_status === 'approved' && !existing.revision_of) {
+    if (hasOpenScheduleRequest(existing.id, 'edit')) return showToast('An edit request is already pending for this schedule.', 'error');
     const revision = createScheduleRevision(existing, candidate);
     state.store.events.push(revision);
     notifyAdmins({
@@ -1908,6 +1921,7 @@ async function saveEvent(candidate) {
 function createScheduleRevision(original, candidate) {
   const now = new Date().toISOString();
   const revisionId = createId();
+  const requestType = candidate.event_status === 'cancellation_requested' ? 'delete' : 'edit';
   return {
     ...candidate,
     id: revisionId,
@@ -1918,9 +1932,12 @@ function createScheduleRevision(original, candidate) {
     revision_of: original.id,
     original_schedule_id: original.id,
     revision_status: 'pending',
+    request_type: requestType,
+    request_reason: candidate.request_reason || candidate.reason || candidate.admin_recommendation || '',
+    requester_id: currentUser(state.store).id,
     revision_created_at: now,
     revision_submitted_at: now,
-    revision_history: [...(original.revision_history || []), { revision_id: revisionId, submitted_at: now, submitted_by: currentUser(state.store).id, status: 'pending' }],
+    revision_history: [...(original.revision_history || []), { revision_id: revisionId, submitted_at: now, submitted_by: currentUser(state.store).id, request_type: requestType, status: 'pending' }],
     approval_status: 'pending',
     approval_date: '',
     notification_status: '',
@@ -2044,15 +2061,10 @@ function isAdminCreatedSchedule(record) {
 function ownsOrganizationSchedule(record) {
   if (!record || !isManager(state.store)) return false;
   const user = currentUser(state.store);
-  const userOrgName = String(user.organization_name || user.organizationName || '').trim().toLowerCase();
-  const recordOrgName = String(record.organization_name || '').trim().toLowerCase();
   return Boolean(
     isOrganizationSchedule(record)
-    && (
-      record.created_by === user.id
-      || (record.organization_id && user.organization_id && record.organization_id === user.organization_id)
-      || (recordOrgName && userOrgName && recordOrgName === userOrgName)
-    )
+    && record.created_by
+    && record.created_by === user.id
   );
 }
 
@@ -2064,7 +2076,7 @@ function setDetailsActionLabels(record) {
   const edit = $('detailsEditButton');
   const remove = $('detailsDeleteButton');
   if (edit) edit.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Edit' : 'Edit';
-  if (remove) remove.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Removal' : 'Remove';
+  if (remove) remove.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Remove' : 'Remove';
 }
 
 function detailsActionVisibility(record) {
@@ -2317,6 +2329,10 @@ function deleteSelectedEvent() {
     confirmAction(`Remove "${record.title || 'Blocked university period'}"?`, remove);
     return;
   }
+  if (ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record)) {
+    confirmAction(`Request removal of "${record.title}"?`, () => requestScheduleRemoval(record));
+    return;
+  }
   confirmDeleteEvent(record);
 }
 function deleteEventFromModal() {
@@ -2327,9 +2343,50 @@ function deleteEventFromModal() {
     return;
   }
   const event = state.store.events.find((item) => item.id === id);
-  if (event) confirmDeleteEvent(event);
+  if (!event) return;
+  if (ownsOrganizationSchedule(event) && isApprovedOriginalOrganizationSchedule(event)) {
+    confirmAction(`Request removal of "${event.title}"?`, () => requestScheduleRemoval(event));
+    return;
+  }
+  confirmDeleteEvent(event);
 }
-function confirmDeleteEvent(event) { if (!requirePermission(canDeleteEvent(state.store, event), 'You cannot delete this event.')) return; confirmAction(`Permanently delete "${event.title}"?`, () => deleteEvent(event)); }
+function confirmDeleteEvent(event) {
+  if (ownsOrganizationSchedule(event) && isApprovedOriginalOrganizationSchedule(event)) {
+    confirmAction(`Request removal of "${event.title}"?`, () => requestScheduleRemoval(event));
+    return;
+  }
+  if (!requirePermission(canDeleteEvent(state.store, event), 'You cannot delete this event.')) return;
+  confirmAction(`Permanently delete "${event.title}"?`, () => deleteEvent(event));
+}
+function hasOpenScheduleRequest(scheduleId, requestType) {
+  return state.store.events.some((event) =>
+    event.revision_of === scheduleId
+    && (event.request_type || (event.event_status === 'cancellation_requested' ? 'delete' : 'edit')) === requestType
+    && ['pending', 'cancel_pending'].includes(event.revision_status || event.approval_status)
+  );
+}
+async function requestScheduleRemoval(original) {
+  if (!requirePermission(ownsOrganizationSchedule(original) && isApprovedOriginalOrganizationSchedule(original), 'You cannot request removal for this schedule.')) return false;
+  if (hasOpenScheduleRequest(original.id, 'delete')) return showToast('A remove request is already pending for this schedule.', 'error');
+  const request = createScheduleRevision(original, { ...original, event_status: 'cancellation_requested' });
+  state.store.events.push(request);
+  notifyAdmins({
+    notification_type: 'schedule_removal_requested',
+    reference_id: request.id,
+    title: 'Schedule Remove Request',
+    message: `${request.organization_name || 'An organization'} requested removal of "${original.title}".`
+  });
+  log('schedule_removal_requested', `${currentUser(state.store).full_name} requested removal of "${original.title}".`, request);
+  const saved = await persist('Schedule remove request submitted for approval.');
+  if (!saved) {
+    await reloadStore().catch(() => {});
+    return false;
+  }
+  closeDialog('detailsModal');
+  closeDialog('eventModal');
+  renderEventRequests();
+  return true;
+}
 async function deleteEvent(event) {
   const index = state.store.events.findIndex((item) => item.id === event.id);
   if (index < 0) return;
