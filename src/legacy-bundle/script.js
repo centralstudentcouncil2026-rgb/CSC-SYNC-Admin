@@ -141,6 +141,7 @@ const state = {
   storeSyncTimer: 0,
   storeSyncing: false,
   storeSyncChannel: null,
+  scheduleSaveInFlight: false,
   portalViewMode: 'dayGridMonth',
   currentView: 'month',
   formMode: 'create',
@@ -1493,34 +1494,6 @@ function isRepeatRule(value) {
   return ['daily', 'weekly', 'monthly', 'yearly'].includes(normalizedRepeatRule(value));
 }
 
-function daysInMonth(year, monthIndex) {
-  return new Date(year, monthIndex + 1, 0).getDate();
-}
-
-function addRepeatInterval(date, rule, anchorDay = date.getDate()) {
-  const next = new Date(date);
-  if (rule === 'daily') next.setDate(next.getDate() + 1);
-  else if (rule === 'weekly') next.setDate(next.getDate() + 7);
-  else if (rule === 'monthly') {
-    const monthIndex = next.getMonth() + 1;
-    const year = next.getFullYear() + Math.floor(monthIndex / 12);
-    const month = monthIndex % 12;
-    next.setFullYear(year, month, Math.min(anchorDay, daysInMonth(year, month)));
-  } else if (rule === 'yearly') {
-    const year = next.getFullYear() + 1;
-    next.setFullYear(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
-  }
-  return next;
-}
-
-function defaultRepeatUntil(startDate, repeatRule) {
-  if (!startDate || repeatRule === 'none') return '';
-  const until = new Date(localIso(startDate, '00:00'));
-  if (Number.isNaN(until.getTime())) return '';
-  until.setFullYear(until.getFullYear() + 1);
-  return dateInput(until);
-}
-
 function sameLocalDay(start, end) {
   return dateInput(start) === dateInput(end);
 }
@@ -1557,6 +1530,34 @@ function inferRepeatRuleFromOccurrences(record = {}, occurrences = []) {
   });
   if (yearly) return 'yearly';
   return record?.schedule_type === 'single_day' ? 'weekly' : 'none';
+}
+
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addRepeatInterval(date, rule, anchorDay = date.getDate()) {
+  const next = new Date(date);
+  if (rule === 'daily') next.setDate(next.getDate() + 1);
+  else if (rule === 'weekly') next.setDate(next.getDate() + 7);
+  else if (rule === 'monthly') {
+    const monthIndex = next.getMonth() + 1;
+    const year = next.getFullYear() + Math.floor(monthIndex / 12);
+    const month = monthIndex % 12;
+    next.setFullYear(year, month, Math.min(anchorDay, daysInMonth(year, month)));
+  } else if (rule === 'yearly') {
+    const year = next.getFullYear() + 1;
+    next.setFullYear(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
+  }
+  return next;
+}
+
+function defaultRepeatUntil(startDate, repeatRule) {
+  if (!startDate || repeatRule === 'none') return '';
+  const until = new Date(localIso(startDate, '00:00'));
+  if (Number.isNaN(until.getTime())) return '';
+  until.setFullYear(until.getFullYear() + 1);
+  return dateInput(until);
 }
 
 function buildRepeatedOccurrences({ existing, startDate, endDate, startTime, endTime, repeatRule, repeatUntil }) {
@@ -1665,6 +1666,26 @@ function syncSingleDayEndDate() {
   if ($('eventScheduleType').value === 'single_day') $('eventEndDate').value = $('eventDate').value;
 }
 
+function setScheduleSaving(saving) {
+  state.scheduleSaveInFlight = saving;
+  const form = $('eventForm');
+  if (form) form.dataset.saving = saving ? '1' : '0';
+  const buttons = [form?.querySelector('.modal-actions .primary-button'), $('agreementSubmitButton')].filter(Boolean);
+  buttons.forEach((button) => {
+    if (saving) {
+      button.dataset.defaultText = button.dataset.defaultText || button.textContent;
+      button.textContent = 'Saving...';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    } else {
+      if (button.dataset.defaultText) button.textContent = button.dataset.defaultText;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }
+  });
+  if (!saving) updateAgreementButton();
+}
+
 function findEventBlock(event) {
   return eventOccurrences(event).map((item) => findBlockingTime(state.store, item.start_time, item.end_time)).find(Boolean);
 }
@@ -1685,10 +1706,19 @@ function scheduleSummary(event) {
   return eventOccurrences(event).map((item) => `${formatDateTime(item.start_time)} to ${formatTime(item.end_time)}`).join('\n');
 }
 
-function submitEventForm(event) {
+function recurrenceDetailSummary(record, occurrences = []) {
+  const rule = normalizedRepeatRule(record?.recurrence_type || record?.repeat_rule || record?.repeat);
+  if (!isRepeatRule(rule)) return '';
+  const labels = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+  const until = record.recurrence_until || record.repeat_until || repeatUntilFromOccurrences(occurrences);
+  return until ? `${labels[rule]} until ${formatDateOnly(until)}` : labels[rule];
+}
+
+async function submitEventForm(event) {
   event.preventDefault();
+  if (state.scheduleSaveInFlight) return;
   if (eventEntryType() === 'blocked_time') {
-    submitBlockedScheduleForm();
+    await submitBlockedScheduleForm();
     return;
   }
   let candidate;
@@ -1713,10 +1743,20 @@ function submitEventForm(event) {
   state.editingScheduleId = editingScheduleId;
   state.pendingEvent = candidate;
   if (conflicts.length) log('event_conflict_warning', `"${candidate.title}" has schedule conflicts.`, { event_id: candidate.id, conflict_ids: candidate.conflict_event_ids });
+  if (isSuperAdmin(state.store)) {
+    setScheduleSaving(true);
+    try {
+      await openAgreementOrPersist(candidate, formMode);
+    } finally {
+      setScheduleSaving(false);
+    }
+    return;
+  }
   openAgreementOrPersist(candidate, formMode);
 }
 
 async function submitBlockedScheduleForm() {
+  if (state.scheduleSaveInFlight) return;
   if (!requirePermission(canManageBlockedTimes(state.store), 'This account cannot create blocked schedules.')) return;
   let block;
   try {
@@ -1727,7 +1767,12 @@ async function submitBlockedScheduleForm() {
   }
   const error = validateBlockedSchedule(block);
   if (error) return showToast(error, 'error');
-  await saveBlockedSchedule(block);
+  setScheduleSaving(true);
+  try {
+    await saveBlockedSchedule(block);
+  } finally {
+    setScheduleSaving(false);
+  }
 }
 
 function readBlockedScheduleForm() {
@@ -1826,16 +1871,17 @@ function openAgreementOrPersist(candidate, formMode = state.formMode || candidat
 function updateAgreementButton() { $('agreementSubmitButton').disabled = !$('agreeRules').checked || !$('agreePrivacy').checked; $('agreementWarning').hidden = !$('agreementSubmitButton').disabled; }
 async function finishAgreement() {
   const button = $('agreementSubmitButton');
-  if (!button || button.disabled || !state.pendingEvent) return;
-  button.disabled = true;
-  button.textContent = 'Saving...';
-  const pendingMode = state.pendingEvent.form_mode || state.formMode || 'create';
-  const saved = pendingMode === 'edit'
-    ? await saveScheduleChanges(state.editingScheduleId || state.pendingEvent.id, state.pendingEvent, scheduleSaveRole())
-    : await createSchedule(state.pendingEvent);
-  if (saved) closeDialog('agreementModal');
-  button.textContent = 'I Agree and Post';
-  updateAgreementButton();
+  if (!button || button.disabled || !state.pendingEvent || state.scheduleSaveInFlight) return;
+  setScheduleSaving(true);
+  try {
+    const pendingMode = state.pendingEvent.form_mode || state.formMode || 'create';
+    const saved = pendingMode === 'edit'
+      ? await saveScheduleChanges(state.editingScheduleId || state.pendingEvent.id, state.pendingEvent, scheduleSaveRole())
+      : await createSchedule(state.pendingEvent);
+    if (saved) closeDialog('agreementModal');
+  } finally {
+    setScheduleSaving(false);
+  }
 }
 
 function scheduleSaveRole() {
@@ -1895,6 +1941,7 @@ async function saveEvent(candidate) {
   const canSave = existing ? canEditEvent(state.store, existing) : canCreateEvents(state.store);
   if (!requirePermission(canSave, existing ? 'You cannot edit this event.' : 'You cannot create schedules.')) return false;
   if (existing && isManager(state.store) && existing.approval_status === 'approved' && !existing.revision_of) {
+    if (hasOpenScheduleRequest(existing.id, 'edit')) return showToast('An edit request is already pending for this schedule.', 'error');
     const revision = createScheduleRevision(existing, candidate);
     state.store.events.push(revision);
     notifyAdmins({
@@ -1952,6 +1999,7 @@ async function saveEvent(candidate) {
 function createScheduleRevision(original, candidate) {
   const now = new Date().toISOString();
   const revisionId = createId();
+  const requestType = candidate.event_status === 'cancellation_requested' ? 'delete' : 'edit';
   return {
     ...candidate,
     id: revisionId,
@@ -1962,9 +2010,12 @@ function createScheduleRevision(original, candidate) {
     revision_of: original.id,
     original_schedule_id: original.id,
     revision_status: 'pending',
+    request_type: requestType,
+    request_reason: candidate.request_reason || candidate.reason || candidate.admin_recommendation || '',
+    requester_id: currentUser(state.store).id,
     revision_created_at: now,
     revision_submitted_at: now,
-    revision_history: [...(original.revision_history || []), { revision_id: revisionId, submitted_at: now, submitted_by: currentUser(state.store).id, status: 'pending' }],
+    revision_history: [...(original.revision_history || []), { revision_id: revisionId, submitted_at: now, submitted_by: currentUser(state.store).id, request_type: requestType, status: 'pending' }],
     approval_status: 'pending',
     approval_date: '',
     notification_status: '',
@@ -1993,9 +2044,10 @@ function openDetails(props) {
     const occurrences = eventOccurrences(record);
     const selectedOccurrence = props.occurrence || occurrences[0];
     const scheduleLabel = selectedOccurrence ? `${formatDateTime(selectedOccurrence.start_time)} to ${formatTime(selectedOccurrence.end_time)}` : scheduleSummary(record);
-    const allSchedulesLabel = occurrences.length > 1
+    const recurrenceLabel = recurrenceDetailSummary(record, occurrences);
+    const allSchedulesLabel = recurrenceLabel || (occurrences.length > 1
       ? occurrences.map((occurrence, index) => `${index + 1}. ${formatDateTime(occurrence.start_time)} to ${formatTime(occurrence.end_time)}`).join('\n')
-      : '';
+      : '');
     const data = {
       Organization: record.organization_name || 'Not specified',
       Category: category.name || record.category_id || 'Uncategorized',
@@ -2088,15 +2140,10 @@ function isAdminCreatedSchedule(record) {
 function ownsOrganizationSchedule(record) {
   if (!record || !isManager(state.store)) return false;
   const user = currentUser(state.store);
-  const userOrgName = String(user.organization_name || user.organizationName || '').trim().toLowerCase();
-  const recordOrgName = String(record.organization_name || '').trim().toLowerCase();
   return Boolean(
     isOrganizationSchedule(record)
-    && (
-      record.created_by === user.id
-      || (record.organization_id && user.organization_id && record.organization_id === user.organization_id)
-      || (recordOrgName && userOrgName && recordOrgName === userOrgName)
-    )
+    && record.created_by
+    && record.created_by === user.id
   );
 }
 
@@ -2108,7 +2155,7 @@ function setDetailsActionLabels(record) {
   const edit = $('detailsEditButton');
   const remove = $('detailsDeleteButton');
   if (edit) edit.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Edit' : 'Edit';
-  if (remove) remove.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Removal' : 'Remove';
+  if (remove) remove.textContent = ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record) ? 'Request Remove' : 'Remove';
 }
 
 function detailsActionVisibility(record) {
@@ -2361,6 +2408,10 @@ function deleteSelectedEvent() {
     confirmAction(`Remove "${record.title || 'Blocked university period'}"?`, remove);
     return;
   }
+  if (ownsOrganizationSchedule(record) && isApprovedOriginalOrganizationSchedule(record)) {
+    confirmAction(`Request removal of "${record.title}"?`, () => requestScheduleRemoval(record));
+    return;
+  }
   confirmDeleteEvent(record);
 }
 function deleteEventFromModal() {
@@ -2371,9 +2422,50 @@ function deleteEventFromModal() {
     return;
   }
   const event = state.store.events.find((item) => item.id === id);
-  if (event) confirmDeleteEvent(event);
+  if (!event) return;
+  if (ownsOrganizationSchedule(event) && isApprovedOriginalOrganizationSchedule(event)) {
+    confirmAction(`Request removal of "${event.title}"?`, () => requestScheduleRemoval(event));
+    return;
+  }
+  confirmDeleteEvent(event);
 }
-function confirmDeleteEvent(event) { if (!requirePermission(canDeleteEvent(state.store, event), 'You cannot delete this event.')) return; confirmAction(`Permanently delete "${event.title}"?`, () => deleteEvent(event)); }
+function confirmDeleteEvent(event) {
+  if (ownsOrganizationSchedule(event) && isApprovedOriginalOrganizationSchedule(event)) {
+    confirmAction(`Request removal of "${event.title}"?`, () => requestScheduleRemoval(event));
+    return;
+  }
+  if (!requirePermission(canDeleteEvent(state.store, event), 'You cannot delete this event.')) return;
+  confirmAction(`Permanently delete "${event.title}"?`, () => deleteEvent(event));
+}
+function hasOpenScheduleRequest(scheduleId, requestType) {
+  return state.store.events.some((event) =>
+    event.revision_of === scheduleId
+    && (event.request_type || (event.event_status === 'cancellation_requested' ? 'delete' : 'edit')) === requestType
+    && ['pending', 'cancel_pending'].includes(event.revision_status || event.approval_status)
+  );
+}
+async function requestScheduleRemoval(original) {
+  if (!requirePermission(ownsOrganizationSchedule(original) && isApprovedOriginalOrganizationSchedule(original), 'You cannot request removal for this schedule.')) return false;
+  if (hasOpenScheduleRequest(original.id, 'delete')) return showToast('A remove request is already pending for this schedule.', 'error');
+  const request = createScheduleRevision(original, { ...original, event_status: 'cancellation_requested' });
+  state.store.events.push(request);
+  notifyAdmins({
+    notification_type: 'schedule_removal_requested',
+    reference_id: request.id,
+    title: 'Schedule Remove Request',
+    message: `${request.organization_name || 'An organization'} requested removal of "${original.title}".`
+  });
+  log('schedule_removal_requested', `${currentUser(state.store).full_name} requested removal of "${original.title}".`, request);
+  const saved = await persist('Schedule remove request submitted for approval.');
+  if (!saved) {
+    await reloadStore().catch(() => {});
+    return false;
+  }
+  closeDialog('detailsModal');
+  closeDialog('eventModal');
+  renderEventRequests();
+  return true;
+}
 async function deleteEvent(event) {
   const index = state.store.events.findIndex((item) => item.id === event.id);
   if (index < 0) return;
@@ -4075,6 +4167,7 @@ function calendarFloatingIso(value) {
 function dateInput(value) { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 function timeInput(value) { return new Date(value).toTimeString().slice(0, 5); }
 function formatDateTime(value) { return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function formatDateOnly(value) { return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
 function formatTime(value) { return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
 function formatInputTime(value) { if (!value) return 'Choose time'; const [hour, minute] = value.split(':').map(Number); return new Date(2000, 0, 1, hour, minute).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
 function eventIsActive(event) { return !['cancelled', 'completed', 'draft'].includes(event.event_status); }

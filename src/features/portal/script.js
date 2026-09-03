@@ -1706,6 +1706,14 @@ function scheduleSummary(event) {
   return eventOccurrences(event).map((item) => `${formatDateTime(item.start_time)} to ${formatTime(item.end_time)}`).join('\n');
 }
 
+function recurrenceDetailSummary(record, occurrences = []) {
+  const rule = normalizedRepeatRule(record?.recurrence_type || record?.repeat_rule || record?.repeat);
+  if (!isRepeatRule(rule)) return '';
+  const labels = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+  const until = record.recurrence_until || record.repeat_until || repeatUntilFromOccurrences(occurrences);
+  return until ? `${labels[rule]} until ${formatDateOnly(until)}` : labels[rule];
+}
+
 async function submitEventForm(event) {
   event.preventDefault();
   if (state.scheduleSaveInFlight) return;
@@ -2036,9 +2044,10 @@ function openDetails(props) {
     const occurrences = eventOccurrences(record);
     const selectedOccurrence = props.occurrence || occurrences[0];
     const scheduleLabel = selectedOccurrence ? `${formatDateTime(selectedOccurrence.start_time)} to ${formatTime(selectedOccurrence.end_time)}` : scheduleSummary(record);
-    const allSchedulesLabel = occurrences.length > 1
+    const recurrenceLabel = recurrenceDetailSummary(record, occurrences);
+    const allSchedulesLabel = recurrenceLabel || (occurrences.length > 1
       ? occurrences.map((occurrence, index) => `${index + 1}. ${formatDateTime(occurrence.start_time)} to ${formatTime(occurrence.end_time)}`).join('\n')
-      : '';
+      : '');
     const data = {
       Organization: record.organization_name || 'Not specified',
       Category: category.name || record.category_id || 'Uncategorized',
@@ -4158,6 +4167,7 @@ function calendarFloatingIso(value) {
 function dateInput(value) { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 function timeInput(value) { return new Date(value).toTimeString().slice(0, 5); }
 function formatDateTime(value) { return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function formatDateOnly(value) { return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
 function formatTime(value) { return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
 function formatInputTime(value) { if (!value) return 'Choose time'; const [hour, minute] = value.split(':').map(Number); return new Date(2000, 0, 1, hour, minute).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
 function eventIsActive(event) { return !['cancelled', 'completed', 'draft'].includes(event.event_status); }
