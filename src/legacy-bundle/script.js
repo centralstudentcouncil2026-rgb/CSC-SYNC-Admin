@@ -452,6 +452,18 @@ function notificationContext() {
   return serviceNotificationContext();
 }
 
+function authenticatedDashboardUserId() {
+  try { return JSON.parse(sessionStorage.getItem('core_supabase_auth_session') || 'null')?.user?.id || ''; }
+  catch { return ''; }
+}
+
+function ownsScheduleRecord(event = {}, user = currentUser(state.store)) {
+  const authUserId = authenticatedDashboardUserId();
+  return Boolean(
+    event.created_by && (event.created_by === user.id || event.created_by === authUserId)
+    || (event.organization_id && user.organization_id && event.organization_id === user.organization_id)
+  );
+}
 function currentUserNotifications() {
   return serviceCurrentUserNotifications();
 }
@@ -679,8 +691,7 @@ function renderCalendarEventContent(arg) {
 function calendarEvents(monthView = isConnectedCalendarView(), viewType = state.calendar?.view.type) {
   const user = currentUser(state.store);
   const visibleEvents = dedupeVisibleScheduleEvents(hideReplacedOriginalSchedules(state.store.events).filter((event) => {
-    const ownsSchedule = event.created_by === user.id
-      || (event.organization_id && user.organization_id && event.organization_id === user.organization_id);
+    const ownsSchedule = ownsScheduleRecord(event, user);
     // Revision requests stay in Schedule Status/Event Requests until approved.
     if (isScheduleRequestOnly(event) && !ownsSchedule && !isSuperAdmin(state.store)) return false;
     if (isConferenceRoomBooking(event)) return false;
@@ -765,7 +776,7 @@ function dedupeVisibleScheduleEvents(events = [], user = {}) {
 function visibleSchedulePreference(event = {}, user = {}) {
   let score = 0;
   if (event.id) score += 1;
-  if (event.created_by === user.id) score += 8;
+  if (ownsScheduleRecord(event, user)) score += 8;
   if (event.organization_id) score += 4;
   if (event.schedule_source === 'organization' || event.created_by_role === 'organization') score += 2;
   if (event.approval_status === 'approved') score += 1;
@@ -2843,7 +2854,7 @@ function renderDashboard() {
     ? state.store.events
     : state.store.events.filter((item) => item.organization_id === user.organization_id);
   const upcoming = events.filter((item) => new Date(item.start_time) >= new Date() && eventIsActive(item));
-  const ownSchedules = isSuperAdmin(state.store) ? events : events.filter((item) => item.created_by === user.id);
+  const ownSchedules = isSuperAdmin(state.store) ? events : events.filter((item) => ownsScheduleRecord(item, user));
   const pending = ownSchedules.filter((item) => item.approval_status === 'pending');
   const approved = ownSchedules.filter((item) => item.approval_status === 'approved');
   const rejected = ownSchedules.filter((item) => item.approval_status === 'rejected');

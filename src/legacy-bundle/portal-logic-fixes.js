@@ -47,16 +47,18 @@ function plfHeaders() {
 }
 
 async function plfPatchCalendarItem(id, payload) {
-  if (!id || !window.SUPABASE_CONFIG?.url) return;
+  if (!id || !window.SUPABASE_CONFIG?.url) return false;
   const response = await fetch(`${window.SUPABASE_CONFIG.url}/rest/v1/calendar_items?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    headers: { ...plfHeaders(), Prefer: 'return=minimal' },
+    headers: { ...plfHeaders(), Prefer: 'return=representation' },
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.message || err.error || `Calendar item patch failed (${response.status})`);
   }
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 async function plfPostCalendarItem(payload) {
@@ -65,9 +67,18 @@ async function plfPostCalendarItem(payload) {
     headers: { ...plfHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(payload)
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Calendar item save failed (${response.status})`);
+  if (response.ok) return;
+  const err = await response.json().catch(() => ({}));
+  if (response.status !== 400) throw new Error(err.message || err.error || `Calendar item save failed (${response.status})`);
+  if (await plfPatchCalendarItem(payload.id, payload)) return;
+  const inserted = await fetch(`${window.SUPABASE_CONFIG.url}/rest/v1/calendar_items`, {
+    method: 'POST',
+    headers: { ...plfHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if (!inserted.ok && inserted.status !== 409) {
+    const insertErr = await inserted.json().catch(() => ({}));
+    throw new Error(insertErr.message || insertErr.error || err.message || err.error || `Calendar item save failed (${inserted.status})`);
   }
 }
 
