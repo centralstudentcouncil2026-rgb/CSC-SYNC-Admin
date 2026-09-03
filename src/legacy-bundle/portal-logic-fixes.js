@@ -3,7 +3,6 @@
 // NOTE: Because it was moved into a feature folder, relative imports may need adjustment before this specific copy is runnable.
 
 const PLF_SESSION_KEY = 'core_supabase_auth_session';
-let plfOrgSnapshot = null;
 
 function plfHex(length) {
   const bytes = new Uint8Array(Math.ceil(length / 2));
@@ -34,11 +33,6 @@ function plfCurrentUserId() { return window.CONNECT_STATE?.store?.currentUserId 
 function plfUuid(value) {
   const text = String(value || '');
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
-}
-
-function plfRepeatRule(value) {
-  const rule = String(value || '').trim().toLowerCase();
-  return ['daily', 'weekly', 'monthly', 'yearly'].includes(rule) ? rule : null;
 }
 
 function plfHeaders() {
@@ -105,6 +99,8 @@ function plfCleanSchedulePayload(row, status, recommendation) {
 }
 
 function plfFullSchedulePayload(row) {
+  const repeatRule = row.recurrence_type || row.repeat_rule || null;
+  const repeatUntil = row.recurrence_until || row.repeat_until || null;
   return {
     category_id: row.category_id || null,
     title: row.title || null,
@@ -119,10 +115,10 @@ function plfFullSchedulePayload(row) {
     contact_info: row.contact_info || null,
     public_description: row.public_description || null,
     purpose: row.purpose || null,
-    repeat_rule: plfRepeatRule(row.recurrence_type || row.repeat_rule),
-    repeat_until: row.recurrence_until || row.repeat_until || null,
-    recurrence_type: plfRepeatRule(row.recurrence_type || row.repeat_rule),
-    recurrence_until: row.recurrence_until || row.repeat_until || null,
+    repeat_rule: repeatRule,
+    repeat_until: repeatUntil,
+    recurrence_type: repeatRule,
+    recurrence_until: repeatUntil,
     approval_status: 'approved',
     admin_recommendation: row.admin_recommendation || null,
     approval_date: row.approval_date || new Date().toISOString(),
@@ -140,18 +136,6 @@ function plfFullSchedulePayload(row) {
 
 function plfEventById(id) { return (window.CONNECT_STATE?.store?.events || []).find((item) => item.id === id); }
 
-function plfLocalIso(date, time) {
-  const value = new Date(`${date}T${time}:00`);
-  return Number.isNaN(value.getTime()) ? '' : value.toISOString();
-}
-function plfDate(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
-function plfTime(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : date.toTimeString().slice(0, 5);
-}
 function plfToast(message, type = 'info') {
   const region = document.getElementById('toastRegion');
   if (!region) return;
@@ -163,55 +147,10 @@ function plfToast(message, type = 'info') {
 }
 function plfOwnsSchedule(row = {}) {
   const user = plfPortalUser();
-  const userOrgName = String(user.organization_name || user.organizationName || '').trim().toLowerCase();
-  const rowOrgName = String(row.organization_name || '').trim().toLowerCase();
-  return plfIsOrgUser() && row.record_type === 'schedule' && (row.created_by === user.id || (row.organization_id && user.organization_id && row.organization_id === user.organization_id) || (rowOrgName && userOrgName && rowOrgName === userOrgName));
+  return plfIsOrgUser() && row.record_type === 'schedule' && row.created_by && row.created_by === user.id;
 }
 function plfApprovedOriginal(row = {}) {
   return row.approval_status === 'approved' && !row.revision_of && !plfIsCancellationRequest(row);
-}
-function plfOrgFormSnapshot(seed = {}) {
-  const get = (id) => document.getElementById(id)?.value || '';
-  const user = plfPortalUser();
-  const scheduleType = get('eventScheduleType') || 'single_day';
-  const startDate = get('eventDate');
-  const endDate = scheduleType === 'multi_day' ? get('eventEndDate') : startDate;
-  const approvedOriginal = plfApprovedOriginal(seed);
-  const now = new Date().toISOString();
-  const occurrence = { id: approvedOriginal ? crypto.randomUUID() : (seed.occurrences?.[0]?.id || crypto.randomUUID()), date: startDate, start_time: plfLocalIso(startDate, get('eventStart')), end_time: plfLocalIso(endDate, get('eventEnd')) };
-  return {
-    ...(approvedOriginal ? {} : seed),
-    id: approvedOriginal ? crypto.randomUUID() : (seed.id || get('eventId') || crypto.randomUUID()),
-    record_type: 'schedule',
-    category_id: get('eventCategory'),
-    title: get('eventTitle').trim(),
-    venue: get('eventVenue').trim(),
-    schedule_type: scheduleType,
-    start_time: occurrence.start_time,
-    end_time: occurrence.end_time,
-    occurrences: [occurrence],
-    expected_attendees: Number.parseInt(get('eventAttendees'), 10) || 1,
-    privacy_level: get('eventPrivacy') || 'basic',
-    contact_person: get('eventContactPerson').trim(),
-    contact_info: get('eventContactInfo').trim(),
-    public_description: get('eventPublicDescription').trim(),
-    purpose: get('eventPurpose').trim(),
-    organization_id: seed.organization_id || user.organization_id || null,
-    organization_name: seed.organization_name || user.organization_name || user.organizationName || '',
-    approval_status: 'pending',
-    revision_of: approvedOriginal ? seed.id : (seed.revision_of || null),
-    original_schedule_id: approvedOriginal ? seed.id : (seed.original_schedule_id || seed.revision_of || null),
-    revision_status: approvedOriginal ? 'pending' : (seed.revision_status || null),
-    revision_created_at: approvedOriginal ? now : (seed.revision_created_at || null),
-    revision_submitted_at: approvedOriginal ? now : (seed.revision_submitted_at || null),
-    revision_history: approvedOriginal ? [...(seed.revision_history || []), { revision_id: crypto.randomUUID(), submitted_at: now, submitted_by: user.id, status: 'pending' }] : (seed.revision_history || []),
-    event_status: seed.event_status === 'cancelled' ? 'planned' : (seed.event_status || 'planned'),
-    notification_status: 'unread',
-    created_by: user.id,
-    created_at: approvedOriginal ? now : (seed.created_at || now),
-    updated_at: now,
-    schedule_schema_version: 2
-  };
 }
 function plfOrgDbRow(row) {
   return {
@@ -243,6 +182,9 @@ function plfOrgDbRow(row) {
     revision_of: row.revision_of || null,
     original_schedule_id: row.original_schedule_id || null,
     revision_status: row.revision_status || null,
+    request_type: row.request_type || null,
+    request_reason: row.request_reason || null,
+    requester_id: plfUuid(row.requester_id),
     revision_created_at: row.revision_created_at || null,
     revision_submitted_at: row.revision_submitted_at || null,
     revision_history: Array.isArray(row.revision_history) ? row.revision_history : [],
@@ -270,13 +212,6 @@ function plfShowOrgButtons() {
     if (remove) remove.textContent = 'Remove';
   }
 }
-function plfOpenOrgEdit(row) {
-  const occurrences = Array.isArray(row.occurrences) && row.occurrences.length ? row.occurrences : [{ start_time: row.start_time, end_time: row.end_time, date: plfDate(row.start_time) }];
-  const first = occurrences[0]; const last = occurrences[occurrences.length - 1];
-  const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value || ''; };
-  set('eventId', row.id); set('eventCategory', row.category_id); set('eventTitle', row.title); set('eventVenue', row.venue); set('eventScheduleType', row.schedule_type || 'single_day'); set('eventDate', first.date || plfDate(first.start_time)); set('eventStart', plfTime(first.start_time)); set('eventEndDate', last.date || plfDate(last.end_time)); set('eventEnd', plfTime(last.end_time)); set('eventAttendees', row.expected_attendees); set('eventPrivacy', row.privacy_level || 'basic'); set('eventContactPerson', row.contact_person); set('eventContactInfo', row.contact_info); set('eventPublicDescription', row.public_description); set('eventPurpose', row.purpose);
-  document.getElementById('detailsModal')?.close(); document.getElementById('eventModal')?.showModal();
-}
 function plfCancellationRequest(row) {
   const now = new Date().toISOString();
   return {
@@ -286,9 +221,12 @@ function plfCancellationRequest(row) {
     revision_of: row.id,
     original_schedule_id: row.id,
     revision_status: 'cancel_pending',
+    request_type: 'delete',
+    request_reason: row.request_reason || null,
+    requester_id: plfCurrentUserId(),
     revision_created_at: now,
     revision_submitted_at: now,
-    revision_history: [...(row.revision_history || []), { revision_id: crypto.randomUUID(), submitted_at: now, submitted_by: plfCurrentUserId(), status: 'cancel_pending' }],
+    revision_history: [...(row.revision_history || []), { revision_id: crypto.randomUUID(), submitted_at: now, submitted_by: plfCurrentUserId(), request_type: 'delete', status: 'cancel_pending' }],
     event_status: 'cancellation_requested',
     notification_status: 'unread',
     created_by: plfCurrentUserId(),
@@ -323,15 +261,9 @@ function plfBindApprovalPersistence() {
 }
 
 function plfBindOrgScheduleFallback() {
-  document.addEventListener('submit', (event) => {
-    if (event.target?.id !== 'eventForm' || !plfIsOrgUser()) return;
-    const id = document.getElementById('eventId')?.value || '';
-    plfOrgSnapshot = plfOrgFormSnapshot(plfEventById(id) || {});
-  }, true);
   document.addEventListener('click', (event) => {
     const selected = window.CONNECT_STATE?.selectedDetails?.record;
     if (!plfOwnsSchedule(selected)) return;
-    if (event.target?.id === 'detailsEditButton') { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); plfOpenOrgEdit(selected); }
     if (event.target?.id === 'detailsDeleteButton') {
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
       if (plfApprovedOriginal(selected)) {
