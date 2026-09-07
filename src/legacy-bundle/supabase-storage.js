@@ -215,9 +215,12 @@ async function ensureManagedProfileOrganization(user={},payload={}){
   try{
     const existingRows=await request('/rest/v1/organizations?select=id,organization_name',{},true);
     const existingOrganizations=Array.isArray(existingRows)?existingRows:[];
-    const nameKey=organizationName.toLowerCase();
-    const matchingName=existingOrganizations.find((organization)=>String(organization.organization_name||'').trim().toLowerCase()===nameKey);
-    let organizationId=matchingName?.id||uuidOrNull(payload.organization_id)||uuidOrNull(user.organization_id)||null;
+    let organizationId=uuidOrNull(payload.organization_id)||uuidOrNull(user.organization_id)||null;
+    if(!organizationId){
+      const nameKey=organizationName.toLowerCase();
+      const matchingName=existingOrganizations.find((organization)=>String(organization.organization_name||'').trim().toLowerCase()===nameKey);
+      organizationId=matchingName?.id||null;
+    }
     const organizationPayload={organization_name:organizationName,organization_type:user.organization_type||'Organization',updated_at:new Date().toISOString()};
     const saved=organizationId
       ? await updateOrganizationById(organizationId,{id:organizationId,...organizationPayload})

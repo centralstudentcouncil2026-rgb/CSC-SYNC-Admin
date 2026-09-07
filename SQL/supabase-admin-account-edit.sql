@@ -58,12 +58,14 @@ begin
   end if;
 
   if payload_organization_name is not null then
-    select organizations.id
-      into target_organization_id
-    from public.organizations
-    where lower(trim(organizations.organization_name)) = lower(payload_organization_name)
-    order by organizations.updated_at desc nulls last, organizations.created_at desc nulls last
-    limit 1;
+    if target_organization_id is null then
+      select organizations.id
+        into target_organization_id
+      from public.organizations
+      where lower(trim(organizations.organization_name)) = lower(payload_organization_name)
+      order by organizations.updated_at desc nulls last, organizations.created_at desc nulls last
+      limit 1;
+    end if;
 
     if target_organization_id is not null then
       update public.organizations
