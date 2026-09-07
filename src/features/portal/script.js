@@ -71,6 +71,23 @@ const ADMIN_COUNCIL_LABELS = {
   'swbscouncil@aup.edu.ph': 'Student Welfare & Basic Services',
   'idttcouncil@aup.edu.ph': 'Information Dissemination & Technical Team'
 };
+const CENTRAL_STUDENT_COUNCIL_NAME = 'Central Student Council';
+const ADMIN_ACCOUNT_ORDER = [
+  'president@aup.edu.ph',
+  'vicepresident@aup.edu.ph',
+  'gensec@aup.edu.ph',
+  'assocgensec@aup.edu.ph',
+  'finance@aup.edu.ph',
+  'cscadviser@aup.edu.ph',
+  'spritdevcouncil@aup.edu.ph',
+  'socdevcouncil@aup.edu.ph',
+  'physdevcouncil@aup.edu.ph',
+  'eacouncil@aup.edu.ph',
+  'arccouncil@aup.edu.ph',
+  'swbscouncil@aup.edu.ph',
+  'idttcouncil@aup.edu.ph'
+];
+const ADMIN_ACCOUNT_ORDER_INDEX = new Map(ADMIN_ACCOUNT_ORDER.map((email, index) => [email, index]));
 const TEXT_LIMITS = {
   username: 32,
   fullName: 120,
@@ -3176,8 +3193,26 @@ function organizationHtml(item) {
 function openUsers() { if (!requirePermission(canManageAccounts(state.store), 'Only the Manager can manage accounts.')) return; renderUsers(); openDialog('usersModal'); }
 function renderUsers() {
   const requests = pendingAccountRequests().map(accountRequestHtml).join('');
-  const accounts = state.store.users.map(userHtml).join('');
+  const accounts = sortedAccountUsers().map(userHtml).join('');
   $('usersList').innerHTML = `${requests}${accounts}` || empty('No accounts');
+}
+
+function sortedAccountUsers() {
+  return [...state.store.users].sort(compareAccountUsers);
+}
+
+function compareAccountUsers(left, right) {
+  const leftEmail = accountEmail(left).toLowerCase();
+  const rightEmail = accountEmail(right).toLowerCase();
+  const leftAdminIndex = ADMIN_ACCOUNT_ORDER_INDEX.has(leftEmail) ? ADMIN_ACCOUNT_ORDER_INDEX.get(leftEmail) : Infinity;
+  const rightAdminIndex = ADMIN_ACCOUNT_ORDER_INDEX.has(rightEmail) ? ADMIN_ACCOUNT_ORDER_INDEX.get(rightEmail) : Infinity;
+  const leftIsAdmin = leftAdminIndex !== Infinity || left.role === 'super_admin';
+  const rightIsAdmin = rightAdminIndex !== Infinity || right.role === 'super_admin';
+  if (leftIsAdmin !== rightIsAdmin) return leftIsAdmin ? -1 : 1;
+  if (leftIsAdmin && leftAdminIndex !== rightAdminIndex) return leftAdminIndex - rightAdminIndex;
+  const leftOrgName = accountOrganizationDisplayName(left).toLowerCase();
+  const rightOrgName = accountOrganizationDisplayName(right).toLowerCase();
+  return leftOrgName.localeCompare(rightOrgName) || String(left.full_name || left.username || '').localeCompare(String(right.full_name || right.username || ''));
 }
 
 function pendingAccountRequests() {
@@ -3197,8 +3232,7 @@ function accountRequestHtml(request) {
 }
 
 function userHtml(user) {
-  const organization = findOrganization({ id: user.organization_id, name: userOrganizationName(user) });
-  const organizationName = organization?.organization_name || userOrganizationName(user) || 'No organization';
+  const organizationName = accountOrganizationDisplayName(user);
   const rows = {
     'Name of the President': user.full_name || '',
     Email: accountEmail(user),
@@ -3207,6 +3241,13 @@ function userHtml(user) {
   };
   const suspendLabel = user.suspended_status ? 'Reactivate Account' : 'Suspend Account';
   return `<div class="activity-item account-card"><div class="account-card-head"><div><strong>${escapeHtml(organizationName)}</strong></div></div><dl class="details-list account-details">${rowsObject(rows)}</dl><div class="account-card-actions">${actionButton('account-edit', user.id, 'Edit Account', 'secondary-button')}${actionButton('account-suspend', user.id, suspendLabel, 'secondary-button')}${actionButton('account-delete', user.id, 'Delete Account', 'danger-button')}</div></div>`;
+}
+
+function accountOrganizationDisplayName(user) {
+  const email = accountEmail(user).toLowerCase();
+  if (ADMIN_ACCOUNT_ORDER_INDEX.has(email) || user.role === 'super_admin') return CENTRAL_STUDENT_COUNCIL_NAME;
+  const organization = findOrganization({ id: user.organization_id, name: userOrganizationName(user) });
+  return organization?.organization_name || userOrganizationName(user) || 'No organization';
 }
 
 function accountEmail(user) {
@@ -3259,6 +3300,7 @@ function openAccountEditor(id) {
 }
 
 function editableAccountOrganizationName(user) {
+  if (ADMIN_ACCOUNT_ORDER_INDEX.has(accountEmail(user).toLowerCase()) || user.role === 'super_admin') return CENTRAL_STUDENT_COUNCIL_NAME;
   const organization = findOrganization({ id: user.organization_id, name: userOrganizationName(user) });
   return organization?.organization_name || userOrganizationName(user) || '';
 }
