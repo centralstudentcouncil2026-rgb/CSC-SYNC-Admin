@@ -540,30 +540,10 @@ function notifyAdminOverride(record, action) {
 }
 
 function renderFilterOptions() {
-  const organizationOptions = [['', 'All organizations'], ...sortedOrganizations(filterReferencedOrganizations()).map((org) => [org.id, org.organization_name])];
+  const organizationOptions = [['', 'All organizations'], ...sortedOrganizations().map((org) => [org.id, org.organization_name])];
   fillSelect('filterOrganization', organizationOptions, state.filters.organization);
   fillSelect('headerOrganizationFilter', organizationOptions, state.filters.organization);
   fillSelect('filterCategory', [['', 'All categories'], ...state.store.categories.filter((item) => item.active).map((item) => [item.id, item.name])], state.filters.category);
-}
-
-function filterReferencedOrganizations(organizations = state.store.organizations) {
-  const byId = new Set();
-  const byName = new Set();
-  const addReference = (record = {}) => {
-    const id = String(record.organization_id || '').trim();
-    const name = String(record.organization_name || record.organizationName || record.name || '').trim().toLowerCase();
-    if (id) byId.add(id);
-    if (name) byName.add(name);
-  };
-  (state.store.users || []).forEach(addReference);
-  (state.store.events || []).forEach(addReference);
-  (state.store.concerns || []).forEach(addReference);
-  const referenced = (organizations || []).filter((org) => {
-    const id = String(org.id || '').trim();
-    const name = String(org.organization_name || org.name || '').trim().toLowerCase();
-    return (id && byId.has(id)) || (name && byName.has(name));
-  });
-  return referenced.length ? referenced : organizations;
 }
 
 function sortedOrganizations(organizations = state.store.organizations) {
