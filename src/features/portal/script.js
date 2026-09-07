@@ -1,5 +1,5 @@
 import { ACCOUNT_PRESETS, ACCOUNT_TYPES, ACTIVITY_STATUS_OPTIONS, buildRecurringOccurrences, createId, inferRecurrenceTypeFromOccurrences } from './app-data.js?v=20260625-status-sync-v1';
-import { authenticate, clearSession, decideAccountRequest, deleteRecord, loadStore, requestAccount, saveConcernRecord, saveStore } from './supabase-storage.js?v=20260625-concerns-sync-v1';
+import { authenticate, clearSession, decideAccountRequest, deleteRecord, loadStore, requestAccount, saveConcernRecord, saveStore, updateAccountProfile } from './supabase-storage.js?v=20260625-concerns-sync-v1';
 import {
   APPROVAL_STATUSES, EVENT_STATUSES, activeAnnouncements, canApproveEvents, canCreateEvents,
   canDeleteEvent, canEditEvent, canManageAccounts, canManageAnnouncements, canManageBlockedTimes,
@@ -3255,12 +3255,45 @@ function openAccountEditor(id) {
   $('accountEditId').value = user.id;
   $('accountEditName').value = user.full_name || '';
   fillSelect('accountEditRole', Object.entries(ACCOUNT_PRESETS).map(([value, preset]) => [value, preset.label]), user.account_preset || 'organization');
-  fillSelect('accountEditOrganization', [['', 'No organization'], ...state.store.organizations.map((org) => [org.id, org.organization_name])], user.organization_id || '');
+  $('accountEditOrganization').value = editableAccountOrganizationName(user);
   $('accountEditEmail').value = accountEmail(user).endsWith('@core.local') ? '' : accountEmail(user);
   $('accountEditContact').value = accountPhone(user) === 'Not provided' ? '' : accountPhone(user);
   $('accountEditStatus').value = (user.suspended_status || user.suspension_status) ? 'suspended' : 'active';
   $('accountEditCreated').value = user.created_at ? formatDateTime(user.created_at) : 'Not recorded';
   openDialog('accountEditModal');
+}
+
+function editableAccountOrganizationName(user) {
+  const organization = findOrganization({ id: user.organization_id, name: userOrganizationName(user) });
+  return organization?.organization_name || userOrganizationName(user) || '';
+}
+
+function applyEditedAccountOrganization(user, organizationName) {
+  const previousName = userOrganizationName(user);
+  let organizationId = user.organization_id || '';
+  let organization = findOrganization({ id: organizationId, name: previousName || organizationName });
+  if (organizationName) {
+    if (!organization) {
+      organization = { id: organizationIdentifier(organizationName), organization_name: organizationName, organization_type: user.organization_type || 'Organization', created_at: new Date().toISOString() };
+      state.store.organizations.push(organization);
+    }
+    organization.organization_name = organizationName;
+    organization.name = organizationName;
+    organization.organization_type = organization.organization_type || user.organization_type || 'Organization';
+    organization.updated_at = new Date().toISOString();
+    organizationId = organization.id;
+  } else {
+    organizationId = '';
+  }
+  user.organization_id = organizationId;
+  user.organization_name = organizationName;
+  user.organizationName = organizationName;
+  state.store.events.forEach((event) => {
+    if ((organizationId && event.organization_id === organizationId) || (previousName && normalizedName(event.organization_name) === normalizedName(previousName))) event.organization_name = organizationName;
+  });
+  state.store.concerns.forEach((concern) => {
+    if ((organizationId && concern.organization_id === organizationId) || (previousName && normalizedName(concern.organization_name) === normalizedName(previousName))) concern.organization_name = organizationName;
+  });
 }
 
 async function submitAccountEditForm(event) {
@@ -3270,18 +3303,22 @@ async function submitAccountEditForm(event) {
   if (!user) return showToast('Account was not found.', 'error');
   const previous = { ...user, permissions: { ...(user.permissions || {}) } };
   const fullName = cleanSingleLine($('accountEditName').value);
+  const organizationName = cleanSingleLine($('accountEditOrganization').value);
   const email = cleanSingleLine($('accountEditEmail').value);
   const contact = cleanSingleLine($('accountEditContact').value);
   if (!fullName) return showToast('Account name is required.', 'error');
+  const selectedPreset = $('accountEditRole').value;
+  if (selectedPreset === 'organization' && !organizationName) return showToast('Organization name is required for organization accounts.', 'error');
   const textError = firstTextLimitError([
     [fullName, TEXT_LIMITS.fullName, 'Account name'],
+    [organizationName, TEXT_LIMITS.organizationName, 'Organization name'],
     [email, 160, 'Email'],
     [contact, 20, 'Contact number']
   ]);
   if (textError) return showToast(textError, 'error');
-  applyAccountPreset(user, $('accountEditRole').value);
+  applyAccountPreset(user, selectedPreset);
   user.full_name = fullName;
-  user.organization_id = $('accountEditOrganization').value;
+  applyEditedAccountOrganization(user, organizationName);
   user.email = email;
   user.aup_email = email;
   user.contact_number = contact;
@@ -3294,10 +3331,16 @@ async function submitAccountEditForm(event) {
     return;
   }
   user.updated_at = new Date().toISOString();
-  log('account_modified', `Modified account "${user.full_name}".`, { user_id: user.id, email: user.email, contact_number: user.contact_number, role: user.role, organization_id: user.organization_id });
-  closeDialog('accountEditModal');
-  await persist('Account updated.');
-  renderUsers();
+  log('account_modified', `Modified account "${user.full_name}".`, { user_id: user.id, email: user.email, contact_number: user.contact_number, role: user.role, organization_id: user.organization_id, organization_name: user.organization_name });
+  try {
+    await updateAccountProfile(user);
+    closeDialog('accountEditModal');
+    await persist('Account updated.');
+    renderUsers();
+  } catch (error) {
+    showToast(`Could not update account: ${error.message}`, 'error');
+    renderUsers();
+  }
 }
 
 async function decidePendingAccountRequest(id, decision) {
