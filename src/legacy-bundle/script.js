@@ -3199,19 +3199,14 @@ function accountRequestHtml(request) {
 function userHtml(user) {
   const organization = findOrganization({ id: user.organization_id, name: userOrganizationName(user) });
   const organizationName = organization?.organization_name || userOrganizationName(user) || 'No organization';
-  const status = accountStatus(user);
   const rows = {
-    Name: user.full_name || '',
-    Role: roleLabel(user.account_preset || user.role),
-    'Account Type': user.account_type || '',
-    Organization: organizationName,
+    'Name of the President': user.full_name || '',
     Email: accountEmail(user),
     'Contact Number': accountPhone(user),
-    'Account Status': status,
     'Creation Date': user.created_at ? formatDateTime(user.created_at) : 'Not recorded'
   };
   const suspendLabel = user.suspended_status ? 'Reactivate Account' : 'Suspend Account';
-  return `<div class="activity-item account-card"><div class="account-card-head"><div><strong>${escapeHtml(user.full_name || user.username)}</strong><p>@${escapeHtml(user.username || 'account')} - ${escapeHtml(status)}</p></div></div><dl class="details-list account-details">${rowsObject(rows)}</dl><div class="account-card-actions">${actionButton('account-edit', user.id, 'Edit Account', 'secondary-button')}${actionButton('account-suspend', user.id, suspendLabel, 'secondary-button')}${actionButton('account-delete', user.id, 'Delete Account', 'danger-button')}</div></div>`;
+  return `<div class="activity-item account-card"><div class="account-card-head"><div><strong>${escapeHtml(organizationName)}</strong></div></div><dl class="details-list account-details">${rowsObject(rows)}</dl><div class="account-card-actions">${actionButton('account-edit', user.id, 'Edit Account', 'secondary-button')}${actionButton('account-suspend', user.id, suspendLabel, 'secondary-button')}${actionButton('account-delete', user.id, 'Delete Account', 'danger-button')}</div></div>`;
 }
 
 function accountEmail(user) {
