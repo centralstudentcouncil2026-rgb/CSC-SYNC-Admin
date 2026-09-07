@@ -40,6 +40,7 @@ let calendarEventPointer = null;
 let lastCalendarDetailsOpen = { scheduleId: '', at: 0 };
 const $ = (id) => document.getElementById(id);
 const FILTER_IDS = ['filterOrganization', 'filterVenue', 'filterCategory', 'filterEventType', 'filterDate', 'filterMonth', 'filterApproval', 'filterEventStatus'];
+const SCHEDULE_TIME_FIELD_IDS = ['eventScheduleType', 'eventDate', 'eventEndDate', 'eventStart', 'eventEnd', 'eventRepeat', 'eventRepeatUntil', 'eventRecurrenceType', 'eventRecurrenceUntil'];
 const ADMIN_TAB_PAGE_IDS = new Set(['announcementsModal', 'eventRequestsModal', 'usersModal']);
 const DASHBOARD_RELOAD_STATE_VERSION = 1;
 const DASHBOARD_RELOAD_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 14;
@@ -299,10 +300,16 @@ function bindEvents() {
   on('eventEntryType', 'change', updateEventEntryType);
   on('eventScheduleType', 'change', updateScheduleType);
   on('eventDate', 'change', syncSingleDayEndDate);
+  SCHEDULE_TIME_FIELD_IDS.forEach((id) => {
+    on(id, 'input', previewBlockedScheduleSelection);
+    on(id, 'change', previewBlockedScheduleSelection);
+  });
   on('eventContactInfo', 'input', (event) => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 11); });
   on('announcementTitle', 'input', updateAnnouncementLivePreview);
   on('announcementContent', 'input', updateAnnouncementLivePreview);
   on('occurrenceList', 'click', handleOccurrenceListClick);
+  on('occurrenceList', 'input', previewBlockedScheduleSelection);
+  on('occurrenceList', 'change', previewBlockedScheduleSelection);
   const closePublicDialogButton = $('closePublicDayDialog');
   if (closePublicDialogButton) closePublicDialogButton.addEventListener('click', closePublicDayDialog);
   $('calendar').addEventListener('pointerdown', startWeekRectangleSelection, true);
@@ -1277,7 +1284,9 @@ function openEventModal(range, record = null) {
   if ($('eventRecurrenceUntil')) $('eventRecurrenceUntil').value = savedRepeatUntil;
   $('deleteEventButton').hidden = isBlockRecord ? !canManageBlockRecord(record) : !canDeleteEvent(state.store, record);
   $('cancelEventButton').hidden = isBlockRecord || !record || !canEditEvent(state.store, record) || ['cancelled', 'disabled', 'completed'].includes(record.event_status);
+  clearBlockedScheduleSelectionWarning();
   openDialog('eventModal');
+  previewBlockedScheduleSelection();
 }
 
 function eventEntryType() {
@@ -1609,9 +1618,9 @@ function ensureOccurrenceRows() {
 function handleOccurrenceListClick(event) {
   const row = event.target.closest('.occurrence-row');
   if (!row) return;
-  if (event.target.matches('[data-remove-occurrence]')) { row.remove(); ensureOccurrenceRows(); return; }
+  if (event.target.matches('[data-remove-occurrence]')) { row.remove(); ensureOccurrenceRows(); previewBlockedScheduleSelection(); return; }
   if (event.target.matches('[data-edit-occurrence-times]')) { row.classList.add('editing-times'); row.querySelector('.occurrence-exception-fields').hidden = false; row.querySelector('[data-occurrence-start]').focus(); }
-  if (event.target.matches('[data-done-occurrence-times]')) { row.classList.remove('editing-times'); row.querySelector('.occurrence-exception-fields').hidden = true; updateOccurrenceRow(row); }
+  if (event.target.matches('[data-done-occurrence-times]')) { row.classList.remove('editing-times'); row.querySelector('.occurrence-exception-fields').hidden = true; updateOccurrenceRow(row); previewBlockedScheduleSelection(); }
 }
 
 function updateOccurrenceRow(row) {
@@ -1642,6 +1651,7 @@ function applySharedTimes() {
     row.querySelector('.occurrence-exception-fields').hidden = true;
     updateOccurrenceRow(row);
   });
+  previewBlockedScheduleSelection();
 }
 
 function updateScheduleType() {
@@ -1653,10 +1663,12 @@ function updateScheduleType() {
   $('eventEndDate').required = multiDay;
   if (!multiDay) syncSingleDayEndDate();
   $('eventEndDate').readOnly = !multiDay;
+  previewBlockedScheduleSelection();
 }
 
 function syncSingleDayEndDate() {
   if ($('eventScheduleType').value === 'single_day') $('eventEndDate').value = $('eventDate').value;
+  previewBlockedScheduleSelection();
 }
 
 function setScheduleSaving(saving) {
@@ -1681,6 +1693,57 @@ function setScheduleSaving(saving) {
 
 function findEventBlock(event) {
   return eventOccurrences(event).map((item) => findBlockingTime(state.store, item.start_time, item.end_time)).find(Boolean);
+}
+
+function previewBlockedScheduleSelection() {
+  const modal = $('eventModal');
+  if (!modal?.open || eventEntryType() === 'blocked_time') return clearBlockedScheduleSelectionWarning();
+  const block = selectedScheduleBlockConflict();
+  setBlockedScheduleSelectionWarning(block);
+}
+
+function selectedScheduleBlockConflict() {
+  const startDate = $('eventDate')?.value || '';
+  const endDate = $('eventScheduleType')?.value === 'multi_day' ? $('eventEndDate')?.value : startDate;
+  const startTime = $('eventStart')?.value || '';
+  const endTime = $('eventEnd')?.value || '';
+  if (!startDate || !endDate || !startTime || !endTime) return null;
+  const formMode = $('eventForm')?.dataset.mode || state.formMode || 'create';
+  const editingId = formMode === 'edit' ? (state.editingScheduleId || $('eventForm')?.dataset.editingScheduleId || $('eventId')?.value || '') : '';
+  const existing = state.store.events.find((event) => event.id === editingId);
+  const repeatRule = repeatControlValue('eventRepeat', 'eventRecurrenceType', existing?.recurrence_type || 'none');
+  const repeatUntil = repeatControlValue('eventRepeatUntil', 'eventRecurrenceUntil', existing?.repeat_until || existing?.recurrence_until || '');
+  const repeatedOccurrences = buildRepeatedOccurrences({
+    existing,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    repeatRule,
+    repeatUntil: repeatRule === 'none' ? '' : (repeatUntil || defaultRepeatUntil(startDate, repeatRule))
+  });
+  const rowOccurrences = readOccurrenceRows().filter((item) => item.date && item.start_time && item.end_time);
+  const occurrences = repeatedOccurrences.length ? repeatedOccurrences : (rowOccurrences.length ? rowOccurrences : [{ date: startDate, start_time: localIso(startDate, startTime), end_time: localIso(endDate, endTime) }]);
+  return occurrences.map((item) => findBlockingTime(state.store, item.start_time, item.end_time, editingId)).find(Boolean) || null;
+}
+
+function setBlockedScheduleSelectionWarning(block) {
+  const message = block
+    ? `This date/time overlaps an admin blocked schedule: ${block.title || 'Blocked schedule'}. Please choose another date or time.`
+    : '';
+  ['eventDate', 'eventEndDate', 'eventStart', 'eventEnd'].forEach((id) => {
+    const input = $(id);
+    if (input) input.setCustomValidity(message);
+  });
+  $('occurrenceList')?.querySelectorAll('[data-occurrence-date],[data-occurrence-start],[data-occurrence-end]').forEach((input) => input.setCustomValidity(message));
+  const submitButton = $('eventForm')?.querySelector('.modal-actions .primary-button');
+  if (submitButton && !state.scheduleSaveInFlight) submitButton.disabled = Boolean(block);
+  if (block && state.liveBlockedScheduleId !== block.id) showToast(message, 'error');
+  state.liveBlockedScheduleId = block?.id || '';
+}
+
+function clearBlockedScheduleSelectionWarning() {
+  setBlockedScheduleSelectionWarning(null);
 }
 
 function calendarMoveAllowed(dropInfo, event) {
