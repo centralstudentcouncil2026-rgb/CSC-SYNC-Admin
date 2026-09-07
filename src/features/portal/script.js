@@ -3370,7 +3370,8 @@ async function submitAccountEditForm(event) {
   user.updated_at = new Date().toISOString();
   log('account_modified', `Modified account "${user.full_name}".`, { user_id: user.id, email: user.email, contact_number: user.contact_number, role: user.role, organization_id: user.organization_id, organization_name: user.organization_name });
   try {
-    await updateAccountProfile(user);
+    const savedProfile = await updateAccountProfile(user, previous);
+    applySavedAccountProfile(user, savedProfile);
     closeDialog('accountEditModal');
     await persist('Account updated.');
     renderUsers();
@@ -3378,6 +3379,25 @@ async function submitAccountEditForm(event) {
     showToast(`Could not update account: ${error.message}`, 'error');
     renderUsers();
   }
+}
+
+function applySavedAccountProfile(user, profile) {
+  if (!profile || typeof profile !== 'object') return;
+  user.full_name = profile.full_name || user.full_name;
+  user.email = profile.email || user.email;
+  user.aup_email = profile.email || user.aup_email;
+  user.organization_id = profile.organization_id || '';
+  user.organization_name = profile.organization_name || '';
+  user.organizationName = profile.organization_name || '';
+  user.contact_number = profile.contact_number || profile.phone_number || '';
+  user.phone_number = profile.phone_number || profile.contact_number || '';
+  user.account_type = profile.account_type || user.account_type;
+  user.account_preset = profile.account_preset || user.account_preset;
+  user.role = profile.role || user.role;
+  user.suspension_status = Boolean(profile.suspension_status);
+  user.suspended_status = Boolean(profile.suspension_status);
+  user.permissions = { ...(user.permissions || {}), ...(profile.permissions || {}), enabled: profile.is_enabled !== false };
+  user.updated_at = profile.updated_at || user.updated_at;
 }
 
 async function decidePendingAccountRequest(id, decision) {
