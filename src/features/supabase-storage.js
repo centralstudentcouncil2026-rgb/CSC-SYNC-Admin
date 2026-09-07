@@ -170,14 +170,14 @@ async function syncOrganizationsTable(store){
   const existingRows=await request('/rest/v1/organizations?select=id,organization_name',{},true);
   const existingOrganizations=Array.isArray(existingRows)?existingRows:[];
   const existingById=new Map(existingOrganizations.filter((organization)=>organization.id).map((organization)=>[String(organization.id),organization.id]));
-  const existingByName=new Map(existingOrganizations.filter((organization)=>organization.organization_name).map((organization)=>[String(organization.organization_name).trim().toLowerCase(),organization.id]));
+  const existingByName=new Map(existingOrganizations.filter((organization)=>organization.organization_name).map((organization)=>[organizationSyncKey(organization.organization_name),organization.id]));
   for(const organization of store.organizations||[]){
     const sourceId=String(organization.id||'').trim();
     const organizationName=String(organization.organization_name||organization.name||'').trim();
-    const resolvedId=existingById.get(sourceId)||existingByName.get(organizationName.toLowerCase())||uuidOrNull(sourceId);
+    const resolvedId=existingById.get(sourceId)||existingByName.get(organizationSyncKey(organizationName))||uuidOrNull(sourceId);
     if(!resolvedId)continue;
     if(sourceId)organizationIds.set(`id:${sourceId}`,resolvedId);
-    if(organizationName)organizationIds.set(`name:${organizationName.toLowerCase()}`,resolvedId);
+    if(organizationName)organizationIds.set(`name:${organizationSyncKey(organizationName)}`,resolvedId);
   }
   if(!isAllowedAdminEmail(authenticatedEmail()))return organizationIds;
   const candidates=(store.organizations||[])
@@ -185,12 +185,12 @@ async function syncOrganizationsTable(store){
     .map((org)=>({source_id:org.id,id:uuidOrNull(org.id),organization_name:String(org.organization_name||org.name).trim(),organization_type:org.organization_type||org.type||'Organization',updated_at:org.updated_at||new Date().toISOString()}));
   const byName=new Map();
   candidates.forEach((organization)=>{
-    const key=organization.organization_name.toLowerCase();
+    const key=organizationSyncKey(organization.organization_name);
     const existing=byName.get(key);
     if(!existing||new Date(organization.updated_at)>=new Date(existing.updated_at))byName.set(key,organization);
   });
   for(const organization of byName.values()){
-    const resolvedExistingId=existingByName.get(organization.organization_name.toLowerCase())||existingById.get(String(organization.source_id||''))||organization.id;
+    const resolvedExistingId=existingByName.get(organizationSyncKey(organization.organization_name))||existingById.get(String(organization.source_id||''))||organization.id;
     const payload={...(resolvedExistingId?{id:resolvedExistingId}:{}),organization_name:organization.organization_name,organization_type:organization.organization_type||'Organization',updated_at:organization.updated_at||new Date().toISOString()};
     const saved=resolvedExistingId
       ? await updateOrganizationById(resolvedExistingId,payload)
@@ -199,10 +199,11 @@ async function syncOrganizationsTable(store){
     const resolvedId=savedRow?.id||resolvedExistingId;
     if(!resolvedId)continue;
     organizationIds.set(`id:${organization.source_id}`,resolvedId);
-    organizationIds.set(`name:${organization.organization_name.toLowerCase()}`,resolvedId);
+    organizationIds.set(`name:${organizationSyncKey(organization.organization_name)}`,resolvedId);
   }
   return organizationIds;
 }
+function organizationSyncKey(value){return String(value||'').trim().replace(/\s+/g,' ').replace(/[\s._-]+$/g,'').toLowerCase()}
 async function updateOrganizationById(id,payload){
   const patched=await request(`/rest/v1/organizations?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:body(payload)},true);
   if(Array.isArray(patched)&&patched.length)return patched;

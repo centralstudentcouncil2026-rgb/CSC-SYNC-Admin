@@ -547,11 +547,21 @@ function renderFilterOptions() {
 }
 
 function sortedOrganizations(organizations = state.store.organizations) {
-  return [...(organizations || [])].sort((left, right) => {
+  const unique = new Map();
+  (organizations || []).forEach((organization) => {
+    const key = organizationDisplayKey(organization.organization_name || organization.name || organization.id);
+    const existing = unique.get(key);
+    if (!existing || new Date(organization.updated_at || organization.created_at || 0) >= new Date(existing.updated_at || existing.created_at || 0)) unique.set(key, organization);
+  });
+  return [...unique.values()].sort((left, right) => {
     const leftName = String(left.organization_name || left.name || left.id || '').trim();
     const rightName = String(right.organization_name || right.name || right.id || '').trim();
     return leftName.localeCompare(rightName, undefined, { sensitivity: 'base' });
   });
+}
+
+function organizationDisplayKey(value) {
+  return cleanSingleLine(value).replace(/[\s._-]+$/g, '').replace(/\s+/g, ' ').toLowerCase();
 }
 
 function renderStatuses() {
@@ -1433,10 +1443,10 @@ function resolveAdminOrganization(user) {
 }
 
 function findOrganization({ id = '', name = '' } = {}) {
-  const normalized = normalizedName(name);
+  const normalized = organizationDisplayKey(name);
   return state.store.organizations.find((org) =>
     (id && org.id === id)
-    || (normalized && normalizedName(org.organization_name || org.name) === normalized)
+    || (normalized && organizationDisplayKey(org.organization_name || org.name) === normalized)
   );
 }
 
@@ -3184,7 +3194,7 @@ function addOrganization(event) {
     [organization_type, TEXT_LIMITS.organizationType, 'Organization type']
   ]);
   if (textError) return showToast(textError, 'error');
-  if (state.store.organizations.some((item) => normalizedName(item.organization_name) === normalizedName(organization_name))) return showToast('An organization with this name already exists.', 'error');
+  if (state.store.organizations.some((item) => organizationDisplayKey(item.organization_name) === organizationDisplayKey(organization_name))) return showToast('An organization with this name already exists.', 'error');
   const item = { id: createId(), organization_name, organization_type, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
   state.store.organizations.push(item);
   log('organization_created', `Created organization "${item.organization_name}".`, item);
@@ -3334,10 +3344,10 @@ function applyEditedAccountOrganization(user, organizationName) {
   user.organization_name = organizationName;
   user.organizationName = organizationName;
   state.store.events.forEach((event) => {
-    if ((organizationId && event.organization_id === organizationId) || (previousName && normalizedName(event.organization_name) === normalizedName(previousName))) event.organization_name = organizationName;
+    if ((organizationId && event.organization_id === organizationId) || (previousName && organizationDisplayKey(event.organization_name) === organizationDisplayKey(previousName))) event.organization_name = organizationName;
   });
   state.store.concerns.forEach((concern) => {
-    if ((organizationId && concern.organization_id === organizationId) || (previousName && normalizedName(concern.organization_name) === normalizedName(previousName))) concern.organization_name = organizationName;
+    if ((organizationId && concern.organization_id === organizationId) || (previousName && organizationDisplayKey(concern.organization_name) === organizationDisplayKey(previousName))) concern.organization_name = organizationName;
   });
 }
 

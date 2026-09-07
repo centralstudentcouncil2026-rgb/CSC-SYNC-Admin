@@ -6,9 +6,9 @@ begin;
 -- Normalize existing names before duplicate detection.
 update public.organizations
 set
-  organization_name = trim(regexp_replace(coalesce(organization_name, ''), '\s+', ' ', 'g')),
+  organization_name = regexp_replace(trim(regexp_replace(coalesce(organization_name, ''), '\s+', ' ', 'g')), '[\s._-]+$', ''),
   updated_at = coalesce(updated_at, now())
-where organization_name is distinct from trim(regexp_replace(coalesce(organization_name, ''), '\s+', ' ', 'g'));
+where organization_name is distinct from regexp_replace(trim(regexp_replace(coalesce(organization_name, ''), '\s+', ' ', 'g')), '[\s._-]+$', '');
 
 update public.organizations
 set
@@ -20,9 +20,9 @@ where nullif(trim(organization_name), '') is null;
 with ranked_organizations as (
   select
     id,
-    lower(trim(organization_name)) as normalized_name,
+    lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', '')) as normalized_name,
     first_value(id) over (
-      partition by lower(trim(organization_name))
+      partition by lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', ''))
       order by updated_at desc nulls last, created_at desc nulls last, id
     ) as keeper_id
   from public.organizations
@@ -41,9 +41,9 @@ where p.organization_id = d.id;
 with ranked_organizations as (
   select
     id,
-    lower(trim(organization_name)) as normalized_name,
+    lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', '')) as normalized_name,
     first_value(id) over (
-      partition by lower(trim(organization_name))
+      partition by lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', ''))
       order by updated_at desc nulls last, created_at desc nulls last, id
     ) as keeper_id
   from public.organizations
@@ -62,9 +62,9 @@ where c.organization_id = d.id;
 with ranked_organizations as (
   select
     id,
-    lower(trim(organization_name)) as normalized_name,
+    lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', '')) as normalized_name,
     first_value(id) over (
-      partition by lower(trim(organization_name))
+      partition by lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', ''))
       order by updated_at desc nulls last, created_at desc nulls last, id
     ) as keeper_id
   from public.organizations
@@ -83,9 +83,9 @@ where c.organization_id = d.id;
 with ranked_organizations as (
   select
     id,
-    lower(trim(organization_name)) as normalized_name,
+    lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', '')) as normalized_name,
     first_value(id) over (
-      partition by lower(trim(organization_name))
+      partition by lower(regexp_replace(trim(regexp_replace(organization_name, '\s+', ' ', 'g')), '[\s._-]+$', ''))
       order by updated_at desc nulls last, created_at desc nulls last, id
     ) as keeper_id
   from public.organizations
@@ -99,6 +99,30 @@ duplicates as (
 delete from public.organizations o
 using duplicates d
 where o.id = d.id;
+
+update public.profiles p
+set
+  organization_name = o.organization_name,
+  updated_at = now()
+from public.organizations o
+where p.organization_id = o.id
+  and coalesce(p.organization_name, '') is distinct from o.organization_name;
+
+update public.calendar_items c
+set
+  organization_name = o.organization_name,
+  updated_at = now()
+from public.organizations o
+where c.organization_id = o.id
+  and coalesce(c.organization_name, '') is distinct from o.organization_name;
+
+update public.concerns c
+set
+  organization_name = o.organization_name,
+  updated_at = now()
+from public.organizations o
+where c.organization_id = o.id
+  and coalesce(c.organization_name, '') is distinct from o.organization_name;
 
 do $$
 begin
