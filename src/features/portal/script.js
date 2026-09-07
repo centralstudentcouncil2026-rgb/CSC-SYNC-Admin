@@ -38,6 +38,7 @@ const CALENDAR_EVENT_TAP_DISTANCE = 8;
 const monthSpanLabels = new Set();
 let calendarEventPointer = null;
 let lastCalendarDetailsOpen = { scheduleId: '', at: 0 };
+let lastMobileCalendarCreateAt = 0;
 const $ = (id) => document.getElementById(id);
 const FILTER_IDS = ['filterOrganization', 'filterVenue', 'filterCategory', 'filterEventType', 'filterDate', 'filterMonth', 'filterApproval', 'filterEventStatus'];
 const SCHEDULE_TIME_FIELD_IDS = ['eventScheduleType', 'eventDate', 'eventEndDate', 'eventStart', 'eventEnd', 'eventRepeat', 'eventRepeatUntil', 'eventRecurrenceType', 'eventRecurrenceUntil'];
@@ -619,8 +620,7 @@ function initializeCalendar() {
     select: (info) => { if (!requirePermission(canCreateEvents(state.store), 'Login as an organization manager or super admin to create requests.')) return; openEventModal(selectionRange(info)); state.calendar.unselect(); },
     dateClick: (info) => {
       if (isPublic(state.store)) return openPublicDayDialog(dateInput(info.date), info.dayEl);
-      if (window.innerWidth > MOBILE_BREAKPOINT || state.calendar.view.type === 'multiMonthYear' || !canCreateEvents(state.store)) return;
-      openEventModal(mobileTapRange(info));
+      openMobileScheduleFromCalendarTap(info);
     },
     eventClick: (info) => handleCalendarEventClick(info),
     eventDidMount: mountCalendarEvent,
@@ -629,6 +629,7 @@ function initializeCalendar() {
   });
   state.calendar.render();
   bindCalendarEventDetailsFallback();
+  bindMobileCalendarTapFallback();
   bindCalendarResizeObserver();
   scheduleCalendarResize(0);
 }
@@ -4345,6 +4346,48 @@ function mobileTapRange(info) {
     return { occurrences: occurrenceRange([date], '09:00', '10:00') };
   }
   const start = info.date;
+  return { start, end: addMinutes(start, 60) };
+}
+function mobileCalendarCreateAllowed() {
+  return !document.body.classList.contains('personal-calendar-perspective')
+    && !isPublic(state.store)
+    && window.innerWidth <= MOBILE_BREAKPOINT
+    && state.calendar?.view?.type !== 'multiMonthYear'
+    && canCreateEvents(state.store);
+}
+function openMobileScheduleFromCalendarTap(info) {
+  if (!mobileCalendarCreateAllowed()) return false;
+  if (Date.now() - lastMobileCalendarCreateAt < 450) return false;
+  lastMobileCalendarCreateAt = Date.now();
+  openEventModal(mobileTapRange(info));
+  return true;
+}
+function bindMobileCalendarTapFallback() {
+  const calendar = $('calendar');
+  if (!calendar || calendar.dataset.mobileCreateFallbackBound === '1') return;
+  calendar.dataset.mobileCreateFallbackBound = '1';
+  calendar.addEventListener('click', (event) => {
+    if (!mobileCalendarCreateAllowed() || Date.now() - lastMobileCalendarCreateAt < 450) return;
+    if (event.target.closest('.fc-event,.fc-more-link,.fc-popover,button,a,input,select,textarea,[role="button"]')) return;
+    const range = mobileTapRangeFromPointer(event);
+    if (!range) return;
+    event.preventDefault();
+    lastMobileCalendarCreateAt = Date.now();
+    openEventModal(range);
+  }, true);
+}
+function mobileTapRangeFromPointer(event) {
+  const date = calendarDateAtPoint(event.clientX, event.clientY)
+    || event.target.closest('.fc-daygrid-day[data-date],.fc-timegrid-col[data-date]')?.dataset.date
+    || '';
+  if (!date) return null;
+  const timeSlot = [...document.querySelectorAll('.fc-timegrid-slot[data-time]')].find((slot) => {
+    const rect = slot.getBoundingClientRect();
+    return event.clientY >= rect.top && event.clientY <= rect.bottom;
+  });
+  const time = timeSlot?.dataset.time?.slice(0, 5) || '';
+  if (!time) return { occurrences: occurrenceRange([date], '09:00', '10:00') };
+  const start = new Date(`${date}T${time}:00`);
   return { start, end: addMinutes(start, 60) };
 }
 function clickedEventDate(info) {
