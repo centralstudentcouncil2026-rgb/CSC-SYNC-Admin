@@ -540,10 +540,18 @@ function notifyAdminOverride(record, action) {
 }
 
 function renderFilterOptions() {
-  const organizationOptions = [['', 'All organizations'], ...state.store.organizations.map((org) => [org.id, org.organization_name])];
+  const organizationOptions = [['', 'All organizations'], ...sortedOrganizations().map((org) => [org.id, org.organization_name])];
   fillSelect('filterOrganization', organizationOptions, state.filters.organization);
   fillSelect('headerOrganizationFilter', organizationOptions, state.filters.organization);
   fillSelect('filterCategory', [['', 'All categories'], ...state.store.categories.filter((item) => item.active).map((item) => [item.id, item.name])], state.filters.category);
+}
+
+function sortedOrganizations(organizations = state.store.organizations) {
+  return [...(organizations || [])].sort((left, right) => {
+    const leftName = String(left.organization_name || left.name || left.id || '').trim();
+    const rightName = String(right.organization_name || right.name || right.id || '').trim();
+    return leftName.localeCompare(rightName, undefined, { sensitivity: 'base' });
+  });
 }
 
 function renderStatuses() {
