@@ -89,21 +89,11 @@
   }
 
   function sortedOrganizations(organizations = []) {
-    const unique = new Map();
-    (organizations || []).forEach((organization) => {
-      const key = organizationDisplayKey(organization.organization_name || organization.name || organization.id);
-      const existing = unique.get(key);
-      if (!existing || new Date(organization.updated_at || organization.created_at || 0) >= new Date(existing.updated_at || existing.created_at || 0)) unique.set(key, organization);
-    });
-    return [...unique.values()].sort((left, right) => {
+    return [...(organizations || [])].sort((left, right) => {
       const leftName = String(left.organization_name || left.name || left.id || '').trim();
       const rightName = String(right.organization_name || right.name || right.id || '').trim();
       return leftName.localeCompare(rightName, undefined, { sensitivity: 'base' });
     });
-  }
-
-  function organizationDisplayKey(value) {
-    return String(value || '').trim().replace(/\s+/g, ' ').replace(/[\s._-]+$/g, '').toLowerCase();
   }
   function readFilters() { filterState.search = (document.getElementById('erFilterSearch')?.value || '').trim().toLowerCase(); filterState.approval = document.getElementById('erFilterApproval')?.value || 'all'; filterState.type = document.getElementById('erFilterType')?.value || 'all'; filterState.organization = document.getElementById('erFilterOrg')?.value || 'all'; render(true); }
   function render(force = false) { if (!isAdmin()) return; const list = document.getElementById('eventRequestsList'); const modal = document.getElementById('eventRequestsModal'); if (!list || !modal || (!modal.open && !modal.classList.contains('is-active'))) return; ensureFilters(); bindHorizontalScroll(list); const events = requestEvents(); const signature = JSON.stringify(events.map((event) => [event.id, event.updated_at, event.approval_status, event.revision_status, event.pending_action, event.title, statusPriority(event)])); if (!force && list.dataset.enhancedSignature === signature && list.classList.contains('event-request-detail-grid')) return; list.dataset.enhancedSignature = signature; internalRender = true; list.className = 'activity-list event-request-detail-grid'; list.innerHTML = events.length ? events.map(requestCard).join('') : '<div class="activity-item"><strong>No matching event requests.</strong></div>'; internalRender = false; }
