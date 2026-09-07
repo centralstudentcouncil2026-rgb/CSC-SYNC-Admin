@@ -3382,6 +3382,7 @@ async function submitAccountEditForm(event) {
     applySavedAccountProfile(user, savedProfile);
     closeDialog('accountEditModal');
     await persist('Account updated.');
+    renderFilterOptions();
     renderUsers();
   } catch (error) {
     showToast(`Could not update account: ${error.message}`, 'error');
@@ -3406,6 +3407,23 @@ function applySavedAccountProfile(user, profile) {
   user.suspended_status = Boolean(profile.suspension_status);
   user.permissions = { ...(user.permissions || {}), ...(profile.permissions || {}), enabled: profile.is_enabled !== false };
   user.updated_at = profile.updated_at || user.updated_at;
+  applySavedAccountOrganization(user, profile);
+}
+
+function applySavedAccountOrganization(user, profile = {}) {
+  const organizationName = String(profile.organization_name || user.organization_name || '').trim();
+  if (!organizationName) return;
+  const organizationId = profile.organization_id || user.organization_id || '';
+  let organization = findOrganization({ id: organizationId, name: organizationName });
+  if (!organization && organizationId) {
+    organization = { id: organizationId, organization_name: organizationName, organization_type: user.organization_type || 'Organization', created_at: profile.created_at || new Date().toISOString() };
+    state.store.organizations.push(organization);
+  }
+  if (!organization) return;
+  organization.organization_name = organizationName;
+  organization.name = organizationName;
+  organization.organization_type = organization.organization_type || user.organization_type || 'Organization';
+  organization.updated_at = profile.updated_at || user.updated_at || new Date().toISOString();
 }
 
 async function decidePendingAccountRequest(id, decision) {

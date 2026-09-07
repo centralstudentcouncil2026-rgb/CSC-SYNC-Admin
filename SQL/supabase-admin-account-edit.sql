@@ -14,7 +14,9 @@ set search_path = public, auth
 as $$
 declare
   target_id uuid;
+  target_organization_id uuid;
   payload_email text;
+  payload_organization_name text;
 begin
   if not public.is_enabled_admin() then
     raise exception 'Admin access required.';
@@ -49,6 +51,52 @@ begin
     raise exception 'No matching auth user/profile was found for %.', coalesce(payload_email, p_previous_email, p_previous_username, p_profile_id_text);
   end if;
 
+  payload_organization_name := nullif(trim(p_profile->>'organization_name'), '');
+
+  if nullif(p_profile->>'organization_id', '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$' then
+    target_organization_id := nullif(p_profile->>'organization_id', '')::uuid;
+  end if;
+
+  if payload_organization_name is not null then
+    select organizations.id
+      into target_organization_id
+    from public.organizations
+    where lower(trim(organizations.organization_name)) = lower(payload_organization_name)
+    order by organizations.updated_at desc nulls last, organizations.created_at desc nulls last
+    limit 1;
+
+    if target_organization_id is not null then
+      update public.organizations
+      set organization_name = payload_organization_name,
+          updated_at = coalesce(nullif(p_profile->>'updated_at', '')::timestamptz, now())
+      where id = target_organization_id;
+    elsif nullif(p_profile->>'organization_id', '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$' then
+      target_organization_id := nullif(p_profile->>'organization_id', '')::uuid;
+
+      update public.organizations
+      set organization_name = payload_organization_name,
+          updated_at = coalesce(nullif(p_profile->>'updated_at', '')::timestamptz, now())
+      where id = target_organization_id
+      returning id into target_organization_id;
+    end if;
+
+    if target_organization_id is null then
+      insert into public.organizations (
+        organization_name,
+        organization_type,
+        created_at,
+        updated_at
+      )
+      values (
+        payload_organization_name,
+        'Organization',
+        now(),
+        coalesce(nullif(p_profile->>'updated_at', '')::timestamptz, now())
+      )
+      returning id into target_organization_id;
+    end if;
+  end if;
+
   insert into public.profiles (
     id,
     username,
@@ -73,8 +121,8 @@ begin
     payload_email,
     coalesce(nullif(trim(p_profile->>'role'), ''), 'organization_manager'),
     nullif(trim(p_profile->>'account_type'), ''),
-    nullif(p_profile->>'organization_id', '')::uuid,
-    nullif(trim(p_profile->>'organization_name'), ''),
+    target_organization_id,
+    payload_organization_name,
     nullif(trim(p_profile->>'contact_number'), ''),
     nullif(trim(coalesce(p_profile->>'phone_number', p_profile->>'contact_number')), ''),
     coalesce((p_profile->>'is_enabled')::boolean, true),
