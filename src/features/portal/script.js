@@ -1246,6 +1246,7 @@ function openEventModal(range, record = null) {
   $('eventForm').dataset.entryType = isBlockRecord ? 'blocked_time' : 'schedule';
   $('eventForm').reset(); $('eventId').value = state.editingScheduleId; $('eventModalTitle').textContent = record ? 'Edit Schedule' : 'Create Schedule';
   if ($('eventEntryType')) $('eventEntryType').value = isBlockRecord ? 'blocked_time' : 'schedule';
+  syncCalendarEntryFieldVisibility();
   $('eventCategory').value = record?.category_id || state.store.categories.find((item) => item.active)?.id || '';
   $('eventTitle').value = record?.title || ''; $('eventVenue').value = record?.venue || '';
   const occurrences = isBlockRecord
@@ -1283,7 +1284,19 @@ function eventEntryType() {
   return isSuperAdmin(state.store) && $('eventEntryType')?.value === 'blocked_time' ? 'blocked_time' : 'schedule';
 }
 
+function syncCalendarEntryFieldVisibility() {
+  const field = $('eventEntryType')?.closest('label');
+  const visible = isSuperAdmin(state.store) && canManageBlockedTimes(state.store);
+  if (field) {
+    field.hidden = !visible;
+    field.classList.toggle('admin-only', !visible);
+    field.classList.toggle('calendar-entry-field', visible);
+  }
+  if ($('eventEntryType')) $('eventEntryType').disabled = !visible;
+}
+
 function updateEventEntryType() {
+  syncCalendarEntryFieldVisibility();
   const blockMode = eventEntryType() === 'blocked_time';
   const form = $('eventForm');
   if (form) form.dataset.entryType = blockMode ? 'blocked_time' : 'schedule';
