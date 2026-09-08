@@ -839,6 +839,149 @@
           gap: 2px !important;
         }
       }
+
+      body.portal-shell:not(.admin-tab-page-open),
+      body.admin-dashboard-shell:not(.admin-tab-page-open),
+      body.org-dashboard-shell:not(.admin-tab-page-open),
+      body.public-shell {
+        min-height: 100dvh !important;
+        overflow: hidden !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) .app-shell,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) .app-shell,
+      body.org-dashboard-shell:not(.admin-tab-page-open) .app-shell,
+      body.public-shell .app-shell,
+      body.public-shell .public-shell {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) .dashboard-content,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) .dashboard-content,
+      body.org-dashboard-shell:not(.admin-tab-page-open) .dashboard-content,
+      body.public-shell .dashboard-content {
+        height: calc(100dvh - var(--csc-measured-header-height, var(--header-height))) !important;
+        max-height: calc(100dvh - var(--csc-measured-header-height, var(--header-height))) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) .calendar-panel,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) .calendar-panel,
+      body.org-dashboard-shell:not(.admin-tab-page-open) .calendar-panel,
+      body.public-shell .calendar-panel,
+      body.public-shell .public-calendar-panel {
+        flex: 1 1 auto !important;
+        height: calc(100dvh - var(--csc-measured-header-height, var(--header-height))) !important;
+        max-height: calc(100dvh - var(--csc-measured-header-height, var(--header-height))) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: clamp(6px, 1vw, 16px) !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar,
+      body.public-shell #calendar,
+      body.public-shell #publicCalendar,
+      body.public-shell .public-calendar,
+      body.personal-calendar-perspective #personalCalendarHost {
+        flex: 1 1 auto !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost {
+        height: calc(100dvh - var(--csc-measured-header-height, var(--header-height)) - (clamp(6px, 1vw, 16px) * 2)) !important;
+        max-height: calc(100dvh - var(--csc-measured-header-height, var(--header-height)) - (clamp(6px, 1vw, 16px) * 2)) !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-view-harness,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-view-harness-active,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-view-harness,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-view-harness-active,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-view-harness,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-view-harness-active,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid,
+      body.public-shell #calendar .fc,
+      body.public-shell #calendar .fc-view-harness,
+      body.public-shell #calendar .fc-view-harness-active,
+      body.public-shell #calendar .fc-scrollgrid,
+      body.public-shell #publicCalendar .fc,
+      body.public-shell #publicCalendar .fc-view-harness,
+      body.public-shell #publicCalendar .fc-view-harness-active,
+      body.public-shell #publicCalendar .fc-scrollgrid,
+      body.personal-calendar-perspective #personalCalendarHost .fc,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness-active,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid {
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-scroller,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scroller,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scroller,
+      body.public-shell #calendar .fc-scroller,
+      body.public-shell #publicCalendar .fc-scroller,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scroller {
+        overflow: hidden !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body table,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body table,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body table,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table,
+      body.public-shell #calendar .fc-daygrid-body,
+      body.public-shell #calendar .fc-daygrid-body table,
+      body.public-shell #calendar .fc-scrollgrid-sync-table,
+      body.public-shell #publicCalendar .fc-daygrid-body,
+      body.public-shell #publicCalendar .fc-daygrid-body table,
+      body.public-shell #publicCalendar .fc-scrollgrid-sync-table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid-sync-table {
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
+      body.public-shell #calendar .fc-daygrid-day-frame,
+      body.public-shell #publicCalendar .fc-daygrid-day-frame,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-frame {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-events,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-events,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-events,
+      body.public-shell #calendar .fc-daygrid-day-events,
+      body.public-shell #publicCalendar .fc-daygrid-day-events,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-events {
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -856,6 +999,7 @@
   function refreshCalendarSizes() {
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
+      updateCalendarFitMetrics();
       for (const calendar of calendarCandidates()) {
         try { calendar.updateSize?.(); } catch (error) { console.warn('Calendar resize failed:', error); }
       }
@@ -875,6 +1019,18 @@
       if (value.trim() === 'Â') node.nodeValue = '';
       else if (value.includes('Â ')) node.nodeValue = value.replace(/\u00c2(?=\s)/g, '');
     }
+  }
+
+  function updateCalendarFitMetrics() {
+    if (!document.documentElement || !document.body) return;
+    const header = document.querySelector('#conferenceRoomModal:not([hidden]) .conference-room-header')
+      || document.querySelector('.topbar')
+      || document.querySelector('.portal-topbar')
+      || document.querySelector('.dashboard-header')
+      || document.querySelector('.public-header')
+      || document.querySelector('.public-calendar-header');
+    const height = Math.ceil(header?.getBoundingClientRect?.().height || 0);
+    if (height > 0) document.documentElement.style.setProperty('--csc-measured-header-height', `${height}px`);
   }
 
   function applyBreakpointClass() {
@@ -916,6 +1072,7 @@
   function bindResizeEvents() {
     const run = () => {
       applyBreakpointClass();
+      updateCalendarFitMetrics();
       refreshCalendarSizes();
     };
     window.addEventListener('resize', run, { passive: true });
@@ -931,6 +1088,7 @@
   function init() {
     injectStyle();
     applyBreakpointClass();
+    updateCalendarFitMetrics();
     cleanMojibakeText();
     observeLayout();
     bindResizeEvents();
