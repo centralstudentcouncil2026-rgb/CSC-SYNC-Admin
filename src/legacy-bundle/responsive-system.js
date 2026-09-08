@@ -841,11 +841,11 @@
       }
 
       :root {
-        --csc-shared-header-height: clamp(54px, 6vw, 76px);
-        --csc-shared-header-padding-x: clamp(8px, 1.4vw, 18px);
-        --csc-shared-header-gap: clamp(6px, 1vw, 12px);
-        --csc-shared-header-title: clamp(1rem, 2.2vw, 2rem);
-        --csc-shared-control-size: clamp(36px, 4.2vw, 52px);
+        --csc-shared-header-height: clamp(46px, 4.2vw, 52px);
+        --csc-shared-header-padding-x: clamp(6px, 1vw, 14px);
+        --csc-shared-header-gap: clamp(5px, .7vw, 8px);
+        --csc-shared-header-title: clamp(.95rem, 1.65vw, 1.35rem);
+        --csc-shared-control-size: clamp(34px, 3.2vw, 40px);
       }
 
       body.admin-dashboard-shell .topbar,
@@ -857,7 +857,7 @@
         box-sizing: border-box !important;
         min-height: var(--csc-shared-header-height) !important;
         overflow: hidden !important;
-        padding-block: clamp(6px, .9vw, 10px) !important;
+        padding-block: clamp(4px, .6vw, 6px) !important;
         padding-inline: var(--csc-shared-header-padding-x) !important;
       }
 
@@ -944,11 +944,11 @@
 
       @media (max-width: 760px) {
         :root {
-          --csc-shared-header-height: clamp(50px, 13vw, 58px);
-          --csc-shared-header-padding-x: clamp(6px, 2vw, 10px);
-          --csc-shared-header-gap: clamp(4px, 1.2vw, 7px);
-          --csc-shared-header-title: clamp(.9rem, 4.2vw, 1.15rem);
-          --csc-shared-control-size: clamp(34px, 9.5vw, 40px);
+          --csc-shared-header-height: clamp(44px, 11vw, 50px);
+          --csc-shared-header-padding-x: clamp(5px, 1.8vw, 8px);
+          --csc-shared-header-gap: clamp(3px, 1vw, 6px);
+          --csc-shared-header-title: clamp(.85rem, 4vw, 1.05rem);
+          --csc-shared-control-size: clamp(32px, 8.4vw, 36px);
         }
 
         body.admin-dashboard-shell .brand-copy {

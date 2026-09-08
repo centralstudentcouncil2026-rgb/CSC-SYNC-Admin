@@ -52,8 +52,9 @@
         margin:0!important;
         max-width:none!important;
         overflow:hidden!important;
-        min-height:58px!important;
-        padding:14px 18px 12px!important;
+        min-height:var(--csc-shared-header-height,52px)!important;
+        padding-block:clamp(4px,.6vw,6px)!important;
+        padding-inline:var(--csc-shared-header-padding-x,clamp(6px,1vw,14px))!important;
         position:sticky!important;
         text-align:center!important;
         top:0!important;
@@ -61,8 +62,8 @@
         z-index:20!important;
       }
       #announcementsModal .modal-header,#usersModal .modal-header{
-        grid-template-columns:minmax(54px,auto) minmax(0,1fr) minmax(54px,auto)!important;
-        min-height:58px!important;
+        grid-template-columns:minmax(var(--csc-shared-control-size,40px),auto) minmax(0,1fr) minmax(var(--csc-shared-control-size,40px),auto)!important;
+        min-height:var(--csc-shared-header-height,52px)!important;
       }
       #announcementsModal .modal-header .portal-tab-back,#usersModal .modal-header .portal-tab-back{
         margin:0!important;
@@ -81,14 +82,14 @@
         aspect-ratio:1/1!important;
         border-radius:999px!important;
         display:inline-flex!important;
-        flex:0 0 40px!important;
+        flex:0 0 var(--csc-shared-control-size,40px)!important;
         font-size:0!important;
-        height:40px!important;
+        height:var(--csc-shared-control-size,40px)!important;
         justify-content:center!important;
-        min-height:40px!important;
-        min-width:40px!important;
+        min-height:var(--csc-shared-control-size,40px)!important;
+        min-width:var(--csc-shared-control-size,40px)!important;
         padding:0!important;
-        width:40px!important;
+        width:var(--csc-shared-control-size,40px)!important;
       }
       .admin-tab-page .portal-tab-back::before{
         color:#0f172a!important;
