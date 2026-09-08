@@ -801,6 +801,11 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     ensureFormValues(range);
     document.getElementById('conferenceRoomDialog')?.showModal?.();
   }
+  function openFormFromCalendarSelection(range) {
+    if (!range) return;
+    lastCalendarTapCreateAt = Date.now();
+    openForm(range);
+  }
   function openFormFromCalendarTap(range) {
     if (!range || Date.now() - lastCalendarTapCreateAt < 450) return;
     lastCalendarTapCreateAt = Date.now();
@@ -1228,7 +1233,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       slotMaxTime: '24:00:00',
       allDaySlot: false,
       height: '100%',
-      select: (info) => openForm({ start: info.start, end: info.end }),
+      select: (info) => openFormFromCalendarSelection({ start: info.start, end: info.end }),
       dateClick: (info) => openFormFromCalendarTap({ start: info.date, end: new Date(info.date.getTime() + 60 * 60 * 1000) }),
       eventClick: (info) => openBookingDetails(info.event.extendedProps.booking, info.event.extendedProps.occurrence),
       eventDrop: async (info) => moveBooking(info),
