@@ -442,7 +442,7 @@
         body.public-shell #publicCalendar,
         .public-calendar {
           min-height: min(720px, calc(100dvh - 138px)) !important;
-          overflow-x: auto !important;
+          overflow-x: hidden !important;
           overflow-y: hidden !important;
           -webkit-overflow-scrolling: touch !important;
         }
@@ -452,7 +452,8 @@
         body.org-dashboard-shell #calendar .fc-scrollgrid,
         body.public-shell #calendar .fc-scrollgrid,
         body.public-shell #publicCalendar .fc-scrollgrid {
-          min-width: 680px !important;
+          min-width: 0 !important;
+          width: 100% !important;
         }
 
         #calendar .fc-daygrid-day-frame,
@@ -525,6 +526,268 @@
           padding: 2px 3px !important;
         }
       }
+
+      body.personal-calendar-perspective #personalCalendarHost,
+      body.personal-calendar-perspective #personalCalendarHost .fc,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness,
+      body.personal-calendar-perspective #personalCalendarHost .fc-view-harness-active,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-col-header,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body table,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid-sync-table {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+        width: 100% !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost {
+        overflow: hidden !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-col-header-cell,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day {
+        min-width: 0 !important;
+        width: 14.2857% !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-frame {
+        align-items: stretch !important;
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: clamp(58px, 10.8dvh, 112px) !important;
+        overflow: hidden !important;
+        padding: clamp(1px, .7vw, 5px) !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-number {
+        color: #0f172a !important;
+        font-size: clamp(.68rem, 1.7vw, .86rem) !important;
+        font-weight: 800 !important;
+        line-height: 1 !important;
+        min-width: 0 !important;
+        padding: 2px 3px !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-day-other .fc-daygrid-day-number {
+        color: #94a3b8 !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-events,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-event-harness {
+        min-width: 0 !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-event {
+        border-radius: 6px !important;
+        font-size: clamp(.56rem, 1.5vw, .72rem) !important;
+        line-height: 1.08 !important;
+        margin: 1px !important;
+        max-width: calc(100% - 2px) !important;
+        min-width: 0 !important;
+        padding: 1px 3px !important;
+        width: calc(100% - 2px) !important;
+      }
+
+      body.personal-calendar-perspective #personalCalendarHost .fc-event-title,
+      body.personal-calendar-perspective #personalCalendarHost .fc-event-time {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      #conferenceRoomModal .conference-room-header {
+        display: grid !important;
+        grid-template-columns: clamp(38px, 4.6vw, 52px) minmax(0, 1fr) auto !important;
+        gap: clamp(6px, 1.4vw, 12px) !important;
+        min-height: var(--header-height) !important;
+        padding: clamp(8px, 1.6vw, 14px) clamp(10px, 2vw, 18px) !important;
+      }
+
+      #conferenceRoomModal .conference-room-header h3 {
+        font-size: clamp(1rem, 2.6vw, 1.35rem) !important;
+        line-height: 1.08 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-align: center !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      #conferenceRoomModal .conference-room-tools {
+        align-items: center !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(5px, 1.2vw, 10px) !important;
+        justify-content: flex-end !important;
+        min-width: 0 !important;
+      }
+
+      #conferenceRoomModal .conference-room-nav-button,
+      #conferenceRoomModal .conference-room-notifications,
+      #conferenceRoomModal #conferenceRoomBack {
+        flex: 0 0 clamp(36px, 4.8vw, 44px) !important;
+        height: clamp(36px, 4.8vw, 44px) !important;
+        max-width: clamp(36px, 4.8vw, 44px) !important;
+        min-height: clamp(36px, 4.8vw, 44px) !important;
+        min-width: clamp(36px, 4.8vw, 44px) !important;
+        padding: 0 !important;
+        width: clamp(36px, 4.8vw, 44px) !important;
+      }
+
+      #conferenceRoomModal .conference-room-body {
+        height: calc(100dvh - var(--header-height)) !important;
+        padding: clamp(6px, 1.4vw, 12px) !important;
+      }
+
+      #conferenceRoomCalendar {
+        height: calc(100dvh - var(--header-height) - clamp(12px, 2.4vw, 24px)) !important;
+        max-height: calc(100dvh - var(--header-height) - clamp(12px, 2.4vw, 24px)) !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .modal-header {
+        align-items: center !important;
+        display: grid !important;
+        gap: clamp(8px, 1.5vw, 14px) !important;
+        grid-template-columns: auto minmax(0, auto) minmax(260px, 1fr) !important;
+        min-width: 0 !important;
+        padding-inline: clamp(10px, 2vw, 20px) !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .modal-header > div:not(.admin-tab-header-tools) {
+        min-width: 0 !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .modal-header h3,
+      #eventRequestsModal.admin-tab-page .modal-header h2 {
+        font-size: clamp(1.05rem, 2.2vw, 1.6rem) !important;
+        line-height: 1.05 !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .admin-tab-header-tools,
+      #eventRequestsModal.admin-tab-page .event-request-filters {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .event-request-filters {
+        align-items: end !important;
+        display: grid !important;
+        gap: clamp(6px, 1.2vw, 10px) !important;
+        grid-template-columns: minmax(150px, 1.15fr) repeat(3, minmax(112px, .85fr)) !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .event-request-filters label {
+        min-width: 0 !important;
+      }
+
+      #eventRequestsModal.admin-tab-page .event-request-filters input,
+      #eventRequestsModal.admin-tab-page .event-request-filters select {
+        border-radius: 999px !important;
+        font-size: clamp(.72rem, 1.6vw, .9rem) !important;
+        min-height: clamp(32px, 4vw, 40px) !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        padding-inline: clamp(8px, 1.5vw, 12px) !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        width: 100% !important;
+      }
+
+      #eventRequestsModal .event-request-detail-grid {
+        max-width: 100% !important;
+        min-width: 0 !important;
+      }
+
+      #eventRequestsModal .event-request-detail-card {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+      }
+
+      #eventRequestsModal .er-detail-row {
+        display: grid !important;
+        grid-template-columns: minmax(112px, .36fr) minmax(0, 1fr) !important;
+      }
+
+      #eventRequestsModal .er-detail-row dd,
+      #eventRequestsModal .er-detail-row dt,
+      #eventRequestsModal .er-card-header h3,
+      #eventRequestsModal .er-card-header p {
+        min-width: 0 !important;
+        overflow-wrap: anywhere !important;
+      }
+
+      #eventRequestsModal .er-card-actions {
+        display: grid !important;
+        gap: clamp(6px, 1vw, 10px) !important;
+        grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)) !important;
+      }
+
+      #eventRequestsModal .er-card-actions button {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      @media (min-width: 761px) and (max-width: 1040px) {
+        #eventRequestsModal.admin-tab-page .modal-header {
+          grid-template-columns: auto minmax(160px, auto) minmax(0, 1fr) !important;
+          min-height: clamp(64px, 8vw, 84px) !important;
+        }
+
+        #eventRequestsModal.admin-tab-page .event-request-filters {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+      }
+
+      @media (max-width: 760px) {
+        #eventRequestsModal.admin-tab-page .modal-header {
+          grid-template-columns: clamp(34px, 9vw, 40px) minmax(0, 1fr) !important;
+          grid-template-rows: auto !important;
+          min-height: clamp(50px, 13vw, 58px) !important;
+          padding: clamp(6px, 2vw, 8px) !important;
+        }
+
+        #eventRequestsModal.admin-tab-page .event-request-filters {
+          grid-template-columns: clamp(32px, 8.5vw, 38px) repeat(3, minmax(0, 1fr)) !important;
+        }
+
+        #eventRequestsModal .er-detail-row {
+          grid-template-columns: minmax(104px, .42fr) minmax(0, 1fr) !important;
+        }
+
+        #eventRequestsModal .er-card-actions {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+      }
+
+      @media (max-width: 420px) {
+        body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-frame {
+          min-height: clamp(46px, 12vw, 58px) !important;
+        }
+
+        body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-event {
+          font-size: .54rem !important;
+          padding-inline: 2px !important;
+        }
+
+        #eventRequestsModal .er-detail-row {
+          grid-template-columns: 1fr !important;
+          gap: 2px !important;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -545,8 +808,22 @@
       for (const calendar of calendarCandidates()) {
         try { calendar.updateSize?.(); } catch (error) { console.warn('Calendar resize failed:', error); }
       }
+      cleanMojibakeText();
       document.dispatchEvent(new CustomEvent('csc-responsive-size-refresh'));
     }, 40);
+  }
+
+  function cleanMojibakeText() {
+    if (!document.body || !window.NodeFilter) return;
+    const scope = document.querySelector('#personalCalendarHost') || document.body;
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const value = node.nodeValue || '';
+      if (value.trim() === 'Â') node.nodeValue = '';
+      else if (value.includes('Â ')) node.nodeValue = value.replace(/\u00c2(?=\s)/g, '');
+    }
   }
 
   function applyBreakpointClass() {
@@ -578,6 +855,11 @@
       attributes: true,
       attributeFilter: ['class', 'hidden', 'open', 'style']
     });
+    new MutationObserver(cleanMojibakeText).observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
   }
 
   function bindResizeEvents() {
@@ -598,6 +880,7 @@
   function init() {
     injectStyle();
     applyBreakpointClass();
+    cleanMojibakeText();
     observeLayout();
     bindResizeEvents();
     refreshCalendarSizes();
