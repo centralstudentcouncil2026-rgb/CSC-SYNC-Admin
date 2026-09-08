@@ -385,7 +385,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     else currentStore.events.push(booking);
     state()?.calendar?.refetchEvents?.();
     state()?.calendar?.render?.();
-    document.dispatchEvent(new CustomEvent('conference-room-bookings-updated', { detail: { deletedId: id, source: 'local-cancel' } }));
+    document.dispatchEvent(new CustomEvent('conference-room-bookings-updated', { detail: { bookingId: booking.id, source: 'local-upsert' } }));
     window.dispatchEvent(new CustomEvent('csc:store-rendered'));
   }
   function hasStoredValue(value) {
@@ -467,13 +467,15 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     const currentStore = store();
     if (!currentStore) return;
     if (!Array.isArray(currentStore.events)) currentStore.events = [];
-    const byId = new Map(currentStore.events.filter((event) => isConference(event) && event.id).map((event) => [event.id, event]));
+    const existingById = new Map(currentStore.events.filter((event) => isConference(event) && event.id).map((event) => [event.id, event]));
+    const byId = new Map();
     rows.filter((row) => row && row.id).forEach((row) => {
-      byId.set(row.id, mergeConferenceRows(byId.get(row.id), row));
+      byId.set(row.id, mergeConferenceRows(existingById.get(row.id), row));
     });
     const conferenceEvents = [...byId.values()].map(conferenceBookingFromRow);
     currentStore.events = [...currentStore.events.filter((event) => !isConference(event)), ...conferenceEvents];
     refresh();
+    document.dispatchEvent(new CustomEvent('conference-room-bookings-updated', { detail: { source: 'database-refresh' } }));
     window.dispatchEvent(new CustomEvent('csc:store-rendered'));
   }
   async function fetchConferenceBookings(authenticated = Boolean(session()?.access_token)) {
@@ -529,6 +531,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     state()?.calendar?.getEventById?.(id)?.remove?.();
     state()?.calendar?.refetchEvents?.();
     state()?.calendar?.render?.();
+    document.dispatchEvent(new CustomEvent('conference-room-bookings-updated', { detail: { deletedId: id, source: 'local-cancel' } }));
     window.dispatchEvent(new CustomEvent('csc:store-rendered'));
   }
   async function databaseBookingConflict(startTime, endTime, ignoreId = '', statuses = ['pending', 'approved']) {
