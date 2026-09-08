@@ -22,6 +22,21 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     'finance@aup.edu.ph',
     'assocgensec@aup.edu.ph'
   ]);
+  const ADMIN_COUNCIL_LABELS = {
+    'arccouncil@aup.edu.ph': 'ARC COUNCIL',
+    'assocgensec@aup.edu.ph': 'ASSOCIATE GENERAL SECRETARY',
+    'eacouncil@aup.edu.ph': 'EA COUNCIL',
+    'gensec@aup.edu.ph': 'GENERAL SECRETARY',
+    'idttcouncil@aup.edu.ph': 'IDTT COUNCIL',
+    'physdevcouncil@aup.edu.ph': 'PHYSICAL DEVELOPMENT COUNCIL',
+    'president@aup.edu.ph': 'PRESIDENT',
+    'socdevcouncil@aup.edu.ph': 'SOCIAL DEVELOPMENT COUNCIL',
+    'spritdevcouncil@aup.edu.ph': 'SPIRITUAL DEVELOPMENT COUNCIL',
+    'swbscouncil@aup.edu.ph': 'SWBS COUNCIL',
+    'vicepresident@aup.edu.ph': 'VICE PRESIDENT',
+    'cscadviser@aup.edu.ph': 'CSC ADVISER',
+    'finance@aup.edu.ph': 'Finance'
+  };
   let calendar = null;
   let selectedRange = null;
   let lastCalendarTapCreateAt = 0;
@@ -580,7 +595,14 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   function bookingTitle() {
     return BOOKING_TITLE;
   }
+  function adminCouncilLabel(current = user()) {
+    return ADMIN_COUNCIL_LABELS[accountLoginEmail(current)] || '';
+  }
   function organizationNameForAccount(current = user()) {
+    if (current?.role === 'super_admin') {
+      const adminLabel = adminCouncilLabel(current);
+      if (adminLabel) return adminLabel;
+    }
     const direct = clean(current.organization_name || current.organizationName || current.organization || current.org_name || current.orgName);
     if (direct) return direct;
     const hasAccountValue = clean(current.id || current.full_name || current.name || current.email || current.username || current.organization_id);
@@ -589,11 +611,16 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     return clean(byId?.organization_name || byId?.name || current.full_name || current.name || accountLoginEmail(current)) || 'Organization';
   }
   function bookingOrganizationName(booking = {}) {
+    const current = user();
+    const creator = booking.created_by === current.id ? current : creatorForBooking(booking);
+    const adminLabel = adminCouncilLabel(creator);
+    const adminSource = ['admin', 'super_admin', 'csc'].includes(String(booking.schedule_source || booking.created_by_role || '').trim().toLowerCase())
+      || creator?.role === 'super_admin'
+      || Boolean(adminLabel);
+    if (adminSource && adminLabel) return adminLabel;
     const direct = clean(booking.organization_name || booking.organizationName || booking.organization);
     if (direct) return direct;
-    const current = user();
     if (booking.created_by === current.id) return organizationNameForAccount(current);
-    const creator = creatorForBooking(booking);
     return organizationNameForAccount(creator) || clean(booking.title) || 'Organization';
   }
   function authenticatedProfileId(current = user()) {

@@ -23,19 +23,19 @@ export const ADMIN_ACCESS_EMAILS=[
 const ADMIN_ACCESS_EMAIL_SET=new Set(ADMIN_ACCESS_EMAILS);
 const ADMIN_PERMISSIONS={enabled:true,manageAccounts:true,approveEvents:true,editAllEvents:true,deleteAllEvents:true,manageBlockedTimes:true,manageAnnouncements:true,updatePresidentStatus:false,updateOfficeStatus:false,manageCategories:false};
 const STATUS_ADMIN_PROFILES={
-  'president@aup.edu.ph':{full_name:'President',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:true,manageAdminTabs:true},
-  'vicepresident@aup.edu.ph':{full_name:'Vice President',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false,manageAdminTabs:true},
-  'gensec@aup.edu.ph':{full_name:'General Secretary',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:true,manageAdminTabs:true},
+  'president@aup.edu.ph':{full_name:'PRESIDENT',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:true,manageAdminTabs:true},
+  'vicepresident@aup.edu.ph':{full_name:'VICE PRESIDENT',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false,manageAdminTabs:true},
+  'gensec@aup.edu.ph':{full_name:'GENERAL SECRETARY',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:true,manageAdminTabs:true},
   'finance@aup.edu.ph':{full_name:'Finance',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:true,manageAdminTabs:true},
-  'assocgensec@aup.edu.ph':{full_name:'Associate Secretary',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'cscadviser@aup.edu.ph':{full_name:'Adviser',account_type:'OIC',updateOfficeStatus:true,updatePresidentStatus:false,manageAdminTabs:true},
-  'physdevcouncil@aup.edu.ph':{full_name:'Physical Development Council',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'socdevcouncil@aup.edu.ph':{full_name:'Social Development Council',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'spritdevcouncil@aup.edu.ph':{full_name:'Spiritual Development Council',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'eacouncil@aup.edu.ph':{full_name:'External Affairs Council',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'arccouncil@aup.edu.ph':{full_name:'Academics & Research Council',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'swbscouncil@aup.edu.ph':{full_name:'Student Welfare & Basic Services',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
-  'idttcouncil@aup.edu.ph':{full_name:'Information Dissemination & Technical Team',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false}
+  'assocgensec@aup.edu.ph':{full_name:'ASSOCIATE GENERAL SECRETARY',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'cscadviser@aup.edu.ph':{full_name:'CSC ADVISER',account_type:'OIC',updateOfficeStatus:true,updatePresidentStatus:false,manageAdminTabs:true},
+  'physdevcouncil@aup.edu.ph':{full_name:'PHYSICAL DEVELOPMENT COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'socdevcouncil@aup.edu.ph':{full_name:'SOCIAL DEVELOPMENT COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'spritdevcouncil@aup.edu.ph':{full_name:'SPIRITUAL DEVELOPMENT COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'eacouncil@aup.edu.ph':{full_name:'EA COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'arccouncil@aup.edu.ph':{full_name:'ARC COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'swbscouncil@aup.edu.ph':{full_name:'SWBS COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false},
+  'idttcouncil@aup.edu.ph':{full_name:'IDTT COUNCIL',account_type:'CSC',updateOfficeStatus:false,updatePresidentStatus:false}
 };
 const CALENDAR_TIME_ZONE='Asia/Manila';
 const DATE_PARTS=new Intl.DateTimeFormat('en-CA',{timeZone:CALENDAR_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'});

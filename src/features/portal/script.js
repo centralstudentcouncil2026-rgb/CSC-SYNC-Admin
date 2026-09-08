@@ -59,19 +59,19 @@ const LEGACY_DEFAULT_ANNOUNCEMENT = {
 const MOBILE_ANNOUNCEMENT_LOGIN_FLAG = 'connect_show_mobile_announcements_after_login';
 const USERNAME_PATTERN = /^[a-z0-9_.-]{3,32}$/;
 const ADMIN_COUNCIL_LABELS = {
-  'president@aup.edu.ph': 'President',
-  'vicepresident@aup.edu.ph': 'Vice President',
-  'gensec@aup.edu.ph': 'General Secretary',
+  'arccouncil@aup.edu.ph': 'ARC COUNCIL',
+  'assocgensec@aup.edu.ph': 'ASSOCIATE GENERAL SECRETARY',
+  'eacouncil@aup.edu.ph': 'EA COUNCIL',
+  'gensec@aup.edu.ph': 'GENERAL SECRETARY',
+  'idttcouncil@aup.edu.ph': 'IDTT COUNCIL',
+  'physdevcouncil@aup.edu.ph': 'PHYSICAL DEVELOPMENT COUNCIL',
+  'president@aup.edu.ph': 'PRESIDENT',
+  'socdevcouncil@aup.edu.ph': 'SOCIAL DEVELOPMENT COUNCIL',
+  'spritdevcouncil@aup.edu.ph': 'SPIRITUAL DEVELOPMENT COUNCIL',
+  'swbscouncil@aup.edu.ph': 'SWBS COUNCIL',
+  'vicepresident@aup.edu.ph': 'VICE PRESIDENT',
+  'cscadviser@aup.edu.ph': 'CSC ADVISER',
   'finance@aup.edu.ph': 'Finance',
-  'assocgensec@aup.edu.ph': 'Associate Secretary',
-  'cscadviser@aup.edu.ph': 'Adviser',
-  'physdevcouncil@aup.edu.ph': 'Physical Development Council',
-  'socdevcouncil@aup.edu.ph': 'Social Development Council',
-  'spritdevcouncil@aup.edu.ph': 'Spiritual Development Council',
-  'eacouncil@aup.edu.ph': 'External Affairs Council',
-  'arccouncil@aup.edu.ph': 'Academics & Research Council',
-  'swbscouncil@aup.edu.ph': 'Student Welfare & Basic Services',
-  'idttcouncil@aup.edu.ph': 'Information Dissemination & Technical Team'
 };
 const CENTRAL_STUDENT_COUNCIL_NAME = 'Central Student Council';
 const ADMIN_ACCOUNT_ORDER = [
@@ -994,6 +994,7 @@ function occurrenceCalendarEvents(event, eventColor, accentColor, weekLineLayout
   const occurrences = eventOccurrences(event);
   const semanticView = calendarViewMode(state.calendar?.view.type);
   const weekParts = new Map();
+  const ownerLabel = scheduleOwnerLabel(event);
   return occurrences.flatMap((occurrence, index) => {
     const weekPart = null;
     const weekLine = null;
@@ -1002,7 +1003,7 @@ function occurrenceCalendarEvents(event, eventColor, accentColor, weekLineLayout
       return {
         id: `${event.id}::${segment.segmentId || occurrence.id}`,
         groupId: event.id,
-        title: `${event.title} - ${event.organization_name}${occurrences.length > 1 && !weekPart ? ` (${index + 1}/${occurrences.length})` : ''}`,
+        title: `${event.title} - ${ownerLabel}${occurrences.length > 1 && !weekPart ? ` (${index + 1}/${occurrences.length})` : ''}`,
         start: segment.segment_start || segment.start_time,
         end: segment.segment_end || segment.end_time,
         allDay: segment.all_day === true,
@@ -1076,13 +1077,14 @@ function calendarTimedSegments(occurrence) {
   return splitEventIntoWeekSegments(scheduleEvent);
 }
 function connectedMonthEvents(event, eventColor, accentColor, viewType = state.calendar?.view.type) {
+  const ownerLabel = scheduleOwnerLabel(event);
   return groupConsecutiveOccurrences(eventOccurrences(event)).flatMap((group, index) => {
     if (group.length === 1) {
       const occurrence = group[0];
       return [{
         id: `${event.id}::${occurrence.id}`,
         groupId: event.id,
-        title: `${event.title} - ${event.organization_name}`,
+        title: `${event.title} - ${ownerLabel}`,
         start: occurrence.start_time,
         end: occurrence.end_time,
         allDay: false,
@@ -1097,7 +1099,7 @@ function connectedMonthEvents(event, eventColor, accentColor, viewType = state.c
     return [{
       id: `${event.id}::month-span-${index}`,
       groupId: event.id,
-      title: `${event.title} - ${event.organization_name}`,
+      title: `${event.title} - ${ownerLabel}`,
       start: group[0].date,
       end: nextDateInput(group.at(-1).date),
       allDay: true,
@@ -1365,7 +1367,7 @@ function readEventForm() {
     : schedule_type;
   return syncEventRange({
     ...existing, id: existing?.id || (formMode === 'edit' ? editingScheduleId : '') || createId(), record_type: 'schedule', schedule_source: scheduleSource, created_by_role: scheduleSource, requires_approval: requiresApproval, title: cleanSingleLine($('eventTitle').value), event_type: category?.name || 'Schedule',
-    organization_id: org?.id || '', organization_name: org?.organization_name || '', category_id: $('eventCategory').value,
+    organization_id: org?.id || '', organization_name: scheduleOwnerLabelForSave(org?.organization_name || ''), category_id: $('eventCategory').value,
     venue: cleanSingleLine($('eventVenue').value), schedule_type: savedScheduleType, occurrences,
     expected_attendees: Number($('eventAttendees').value), public_description: cleanMultiline($('eventPublicDescription').value), purpose: cleanMultiline($('eventPurpose').value),
     contact_person: cleanSingleLine($('eventContactPerson').value) || defaultScheduleContactPerson(), contact_info: cleanSingleLine($('eventContactInfo').value) || defaultScheduleContactInfo(), repeat_until: effectiveRepeatUntil, recurrence_type: repeatRule, recurrence_until: effectiveRepeatUntil, private_notes: existing?.private_notes || '',
@@ -1487,13 +1489,31 @@ function adminProfileContactCache(user = currentUser(state.store)) {
 
 function adminCouncilLabel(user = currentUser(state.store)) {
   const email = String(accountEmail(user) || '').trim().toLowerCase();
-  return ADMIN_COUNCIL_LABELS[email] || user.full_name || userOrganizationName(user) || email || 'Admin Account';
+  return ADMIN_COUNCIL_LABELS[email] || '';
+}
+
+function adminCouncilFallbackLabel(user = currentUser(state.store)) {
+  return adminCouncilLabel(user) || user.full_name || userOrganizationName(user) || accountEmail(user) || 'Admin Account';
+}
+
+function scheduleOwnerLabelForSave(defaultName = '') {
+  return isSuperAdmin(state.store) ? (adminCouncilLabel() || defaultName || 'Central Student Council') : defaultName;
+}
+
+function scheduleOwnerLabel(record = {}) {
+  const creator = (state.store.users || []).find((item) => String(item.id || '') === String(record.created_by || ''));
+  const adminLabel = adminCouncilLabel(creator);
+  const adminSource = ['admin', 'super_admin', 'csc'].includes(String(record.schedule_source || record.created_by_role || '').trim().toLowerCase())
+    || creator?.role === 'super_admin'
+    || Boolean(adminLabel);
+  if (adminSource && adminLabel) return adminLabel;
+  return record.organization_name || record.organizationName || record.organization || 'Not specified';
 }
 
 function defaultScheduleContactPerson() {
   const user = currentUser(state.store);
   const cached = adminProfileContactCache(user);
-  return cleanSingleLine(cached?.messenger_account || user.messenger_account || user.messengerAccount || user.messenger || adminCouncilLabel(user));
+  return cleanSingleLine(cached?.messenger_account || user.messenger_account || user.messengerAccount || user.messenger || adminCouncilFallbackLabel(user));
 }
 
 function defaultScheduleContactInfo() {
@@ -2106,7 +2126,7 @@ function openDetails(props) {
       ? occurrences.map((occurrence, index) => `${index + 1}. ${formatDateTime(occurrence.start_time)} to ${formatTime(occurrence.end_time)}`).join('\n')
       : '');
     const data = {
-      Organization: record.organization_name || 'Not specified',
+      Organization: scheduleOwnerLabel(record),
       Category: category.name || record.category_id || 'Uncategorized',
       Venue: record.venue || 'Not specified',
       Schedule: scheduleLabel,
@@ -2397,7 +2417,7 @@ function renderPublicDayDialog() {
   $('publicDayCount').textContent = `${items.length} public event${items.length === 1 ? '' : 's'}`;
   $('publicDayEvents').innerHTML = items.map(({ event, occurrence }) => {
     const category = categoryById(state.store, event.category_id);
-    return `<article class="public-day-event" style="border-left-color:${escapeHtml(organizationColor(state.store, event))};--event-accent-color:${escapeHtml(eventAccentColor(state.store, event))}"><strong>${escapeHtml(event.title)}</strong><p>${escapeHtml(formatTime(occurrence.start_time))} to ${escapeHtml(formatTime(occurrence.end_time))}</p><p>${escapeHtml(event.organization_name)} - ${escapeHtml(event.venue)}</p><p>${escapeHtml(category.name)} - ${escapeHtml(cap(event.event_status))}</p><p>${escapeHtml(event.public_description)}</p></article>`;
+    return `<article class="public-day-event" style="border-left-color:${escapeHtml(organizationColor(state.store, event))};--event-accent-color:${escapeHtml(eventAccentColor(state.store, event))}"><strong>${escapeHtml(event.title)}</strong><p>${escapeHtml(formatTime(occurrence.start_time))} to ${escapeHtml(formatTime(occurrence.end_time))}</p><p>${escapeHtml(scheduleOwnerLabel(event))} - ${escapeHtml(event.venue)}</p><p>${escapeHtml(category.name)} - ${escapeHtml(cap(event.event_status))}</p><p>${escapeHtml(event.public_description)}</p></article>`;
   }).join('') || '<p class="empty-text">No public events scheduled for this date.</p>';
 }
 
