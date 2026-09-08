@@ -377,12 +377,13 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const response = await fetch(bookingSaveUrl(row.id, existingBooking), {
         method: existingBooking ? 'PATCH' : 'POST',
-        headers: dbHeaders(),
+        headers: { ...dbHeaders(), Prefer: 'return=representation' },
         body: JSON.stringify(row)
       });
       if (response.ok) {
+        const savedRows = await response.json().catch(() => []);
         if (strippedColumns.size) console.warn('CONNECT conference room save skipped unsupported columns:', [...strippedColumns]);
-        return;
+        return conferenceBookingFromRow((Array.isArray(savedRows) ? savedRows[0] : savedRows) || await fetchBookingById(row.id) || row);
       }
       if (response.status === 401 && session()?.refresh_token) {
         await refreshSession();
@@ -393,10 +394,13 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       if (!existingBooking && response.status === 409) {
         const patchResponse = await fetch(bookingSaveUrl(row.id, true), {
           method: 'PATCH',
-          headers: dbHeaders(),
+          headers: { ...dbHeaders(), Prefer: 'return=representation' },
           body: JSON.stringify(row)
         });
-        if (patchResponse.ok) return;
+        if (patchResponse.ok) {
+          const savedRows = await patchResponse.json().catch(() => []);
+          return conferenceBookingFromRow((Array.isArray(savedRows) ? savedRows[0] : savedRows) || await fetchBookingById(row.id) || row);
+        }
         const patchPayload = await patchResponse.json().catch(() => ({}));
         console.warn('CONNECT conference room duplicate patch failed:', patchPayload, row);
         throw new Error(supabaseErrorMessage(patchPayload, patchResponse.status));
@@ -414,6 +418,18 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   function bookingSaveUrl(id, existingBooking) {
     const base = `${supabaseUrl()}/rest/v1/conference_room_bookings`;
     return existingBooking ? `${base}?id=eq.${encodeURIComponent(id)}` : base;
+  }
+  async function fetchBookingById(id, authenticated = true) {
+    const response = await fetch(`${supabaseUrl()}/rest/v1/conference_room_bookings?select=*&id=eq.${encodeURIComponent(id)}&limit=1`, {
+      headers: dbReadHeaders(authenticated)
+    });
+    const rows = response.status === 204 ? [] : await response.json().catch(() => []);
+    if (!response.ok) return null;
+    return Array.isArray(rows) ? rows[0] || null : rows || null;
+  }
+  async function verifyBookingDeleted(id) {
+    const row = await fetchBookingById(id, true).catch(() => null);
+    if (row) throw new Error(`Conference room booking delete verification failed for ${id}`);
   }
   function supabaseErrorMessage(payload = {}, status = 400) {
     return [payload.message, payload.details, payload.hint, payload.error].filter(Boolean).join(' ') || `Conference room booking save failed (${status})`;
@@ -566,12 +582,13 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     await ensureFreshSession();
     const response = await fetch(bookingSaveUrl(booking.id, true), {
       method: 'DELETE',
-      headers: dbHeaders()
+      headers: { ...dbHeaders(), Prefer: 'return=representation' }
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(supabaseErrorMessage(payload, response.status));
     }
+    await verifyBookingDeleted(booking.id);
   }
   function removeLocalBooking(id) {
     const currentStore = store();
@@ -964,17 +981,18 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     if (conflict) return api().showToast?.('The conference room already has a pending or approved booking for this time.', 'error');
     const databaseConflict = await databaseReservedConflict(booking.occurrences);
     if (databaseConflict) return api().showToast?.('The conference room already has a pending or approved booking for this time.', 'error');
+    let savedBooking = booking;
     try {
-      await saveBookingToDatabase(booking);
+      savedBooking = await saveBookingToDatabase(booking) || booking;
     } catch (error) {
       api().showToast?.(`Conference room booking could not be saved to database: ${error.message}`, 'error');
       return;
     }
-    upsertLocalBooking(booking);
+    upsertLocalBooking(savedBooking);
     window.setTimeout(refreshBookingsFromDatabase, 800);
-    if (booking.approval_status === 'pending') notifyAdmins(booking);
-    api().log?.('conference_room_booking_created', `${user().full_name} created a conference room booking.`, api().scheduleAuditSnapshot?.(booking) || booking);
-    api().showToast?.(booking.approval_status === 'pending' ? 'Conference room booking submitted for approval.' : 'Conference room booking saved.', 'success');
+    if (savedBooking.approval_status === 'pending') notifyAdmins(savedBooking);
+    api().log?.('conference_room_booking_created', `${user().full_name} created a conference room booking.`, api().scheduleAuditSnapshot?.(savedBooking) || savedBooking);
+    api().showToast?.(savedBooking.approval_status === 'pending' ? 'Conference room booking submitted for approval.' : 'Conference room booking saved.', 'success');
     closeForm();
     refresh();
   }
@@ -1055,16 +1073,17 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     booking.rejection_reason = status === 'rejected' ? remarks : '';
     booking.notification_status = 'unread';
     booking.updated_at = now;
+    let savedBooking = booking;
     try {
-      await saveBookingToDatabase(booking);
+      savedBooking = await saveBookingToDatabase(booking) || booking;
     } catch (error) {
       Object.assign(booking, previousBooking);
       api().showToast?.(`Conference room booking review could not be saved to database: ${error.message}`, 'error');
       return;
     }
-    upsertLocalBooking(booking);
-    api().log?.(`conference_room_booking_${status}`, `${user().full_name} ${status} a conference room booking.`, api().scheduleAuditSnapshot?.(booking) || booking);
-    void notifyBookingOwner(booking, status, remarks);
+    upsertLocalBooking(savedBooking);
+    api().log?.(`conference_room_booking_${status}`, `${user().full_name} ${status} a conference room booking.`, api().scheduleAuditSnapshot?.(savedBooking) || savedBooking);
+    void notifyBookingOwner(savedBooking, status, remarks);
     api().showToast?.(`Conference room booking ${status}.`, 'success');
     closeBookingDetails();
     refresh();
@@ -1379,15 +1398,16 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     booking.repeat_rule = 'none';
     booking.repeat_until = '';
     booking.updated_at = new Date().toISOString();
+    let savedBooking = booking;
     try {
-      await saveBookingToDatabase(booking);
+      savedBooking = await saveBookingToDatabase(booking) || booking;
     } catch (error) {
       Object.assign(booking, previousBooking);
       api().showToast?.(`Conference room booking update could not be saved to database: ${error.message}`, 'error');
       info.revert();
       return;
     }
-    upsertLocalBooking(booking);
+    upsertLocalBooking(savedBooking);
     api().showToast?.('Conference room booking updated.', 'success');
     refresh();
   }

@@ -5,7 +5,8 @@ const READ_STORAGE_PREFIX = 'csc_sync_notification_read_v2';
 const REALTIME_TABLES = ['calendar_items', 'announcements', 'concerns', 'conference_room_bookings', 'profiles'];
 const REALTIME_REFRESH_DELAY_MS = 180;
 const REALTIME_HEARTBEAT_MS = 25000;
-const CONFERENCE_ROOM_POLL_MS = 5000;
+const FALLBACK_REFRESH_MS = 15000;
+const REALTIME_RECONNECT_MS = 2500;
 const NOTIFICATION_FILTERS = ['all', 'unread', 'schedules', 'concerns', 'announcements', 'accounts'];
 
 let context = {};
@@ -13,13 +14,16 @@ let schemaMode = '';
 let realtimeSocket = null;
 let realtimeRef = 1;
 let heartbeatTimer = null;
-let conferenceRoomPollTimer = null;
+let fallbackRefreshTimer = null;
+let realtimeReconnectTimer = null;
 let realtimeJoined = false;
+let realtimeStopped = false;
 let refreshTimer = null;
 let refreshPromise = null;
 let queuedTables = new Set();
 let knownNotificationKeys = new Set();
 let activeNotificationFilter = 'all';
+let syncStatusTimer = 0;
 
 export function configureNotifications(nextContext = {}) {
   context = { ...context, ...nextContext };
@@ -52,6 +56,10 @@ export function ensureNotificationStyles() {
   const style = document.createElement('style');
   style.id = 'shared-notification-style';
   style.textContent = `
+    #calendarSyncStatus{position:fixed;right:14px;bottom:14px;z-index:2147483400;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;box-shadow:0 10px 30px rgba(15,23,42,.14);font-size:.78rem;font-weight:900;line-height:1;padding:9px 12px;pointer-events:none}
+    #calendarSyncStatus[hidden]{display:none!important}
+    #calendarSyncStatus[data-sync-status="offline"]{border-color:#fecaca;background:#fef2f2;color:#b91c1c}
+    #calendarSyncStatus[data-sync-status="syncing"]{border-color:#fde68a;background:#fffbeb;color:#92400e}
     #notificationsModal[open]{padding:0;border:0;background:rgba(15,23,42,.64);max-width:none;max-height:none;width:100vw;height:100vh}
     #notificationsModal[open]::backdrop{background:rgba(15,23,42,.74);backdrop-filter:blur(6px)}
     #notificationsModal[open] .modal-card{width:min(95vw,1100px);max-height:96vh;margin:2vh auto;padding:20px 34px 24px;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.3);overflow:hidden}
@@ -97,6 +105,7 @@ export function ensureNotificationStyles() {
     #notificationsList .notification-target-button::after{content:"  →"}
     #notificationsList .notification-empty{border:1px dashed #cfe0f5;border-radius:12px;padding:24px;color:#64748b;background:#f8fafc}
     @media (max-width:700px){
+      #calendarSyncStatus{right:10px;bottom:10px;font-size:.72rem;padding:8px 10px}
       #notificationsModal[open] .modal-card{width:95vw;max-height:96vh;margin:2vh auto;padding:16px 14px 18px}
       #notificationsModal[open] .modal-header h3{font-size:1.45rem}
       #notificationsModal[open] .modal-header .icon-button{width:36px;height:36px}
@@ -125,6 +134,8 @@ export function updateNotificationBadge() {
 export async function startNotificationRuntime() {
   stopNotificationRuntime();
   ensureNotificationStyles();
+  realtimeStopped = false;
+  startFallbackRefresh();
   await mergeConferenceRoomBookings().catch(() => null);
   await requestNotificationRefresh();
   knownNotificationKeys = notificationKeySet();
@@ -138,12 +149,14 @@ export function stopNotificationRuntime() {
   queuedTables = new Set();
   knownNotificationKeys = new Set();
   realtimeJoined = false;
+  realtimeStopped = true;
   if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+  if (fallbackRefreshTimer) window.clearInterval(fallbackRefreshTimer);
+  if (realtimeReconnectTimer) window.clearTimeout(realtimeReconnectTimer);
   heartbeatTimer = null;
-  if (realtimeSocket) {
-    try { realtimeSocket.close(1000, 'notification runtime stopped'); } catch {}
-  }
-  realtimeSocket = null;
+  fallbackRefreshTimer = null;
+  realtimeReconnectTimer = null;
+  stopRealtimeSocket();
 }
 
 export async function requestNotificationRefresh() {
@@ -272,29 +285,34 @@ export function subscribeNotifications(onChange = () => {}) {
   const config = window.SUPABASE_CONFIG || {};
   const token = session()?.access_token;
   const key = supabaseKey(config);
-  if (!config.url || !key || !token || typeof WebSocket === 'undefined') return null;
+  if (!config.url || !key || typeof WebSocket === 'undefined') {
+    setSyncStatus('offline');
+    return null;
+  }
   const socketUrl = `${String(config.url).replace(/^http/i, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(key)}&vsn=1.0.0`;
   const topic = `realtime:csc-sync-notifications:${currentUser().id || currentUser().organization_id || 'user'}`;
-  const postgresChanges = REALTIME_TABLES.map((table) => ({ event: '*', schema: 'public', table }));
-  queueRealtimeRefresh({ table: 'conference_room_bookings', eventType: 'poll' }).catch(() => null);
-  conferenceRoomPollTimer = window.setInterval(() => {
-    queueRealtimeRefresh({ table: 'conference_room_bookings', eventType: 'poll' }).catch(() => null);
-  }, CONFERENCE_ROOM_POLL_MS);
+  const postgresChanges = REALTIME_TABLES.map((table) => ({ event: '*', schema: 'public', table, filter: '' }));
   realtimeSocket = new WebSocket(socketUrl);
   realtimeSocket.addEventListener('open', () => {
     realtimeJoined = false;
+    setSyncStatus('syncing');
     sendRealtime(topic, 'phx_join', {
       config: { postgres_changes: postgresChanges },
-      access_token: token
+      access_token: token || key
     });
     heartbeatTimer = window.setInterval(() => sendRealtime('phoenix', 'heartbeat', {}, String(realtimeRef++)), REALTIME_HEARTBEAT_MS);
   });
   realtimeSocket.addEventListener('message', (event) => {
     const message = parseRealtimeMessage(event.data);
     if (!message) return;
-    if (message.event === 'phx_reply' && message.payload?.status === 'ok') realtimeJoined = true;
+    if (message.event === 'phx_reply' && message.payload?.status === 'ok') {
+      realtimeJoined = true;
+      setSyncStatus('online');
+      queueRealtimeRefresh({ table: 'calendar_items', eventType: 'reconnect' }).catch(() => null);
+    }
     if (!realtimeJoined || message.event !== 'postgres_changes') return;
     const payload = message.payload?.data || message.payload || {};
+    setSyncStatus('syncing');
     onChange({
       ...payload,
       table: payload.table || payload?.schema_table || tableFromRealtimePayload(payload),
@@ -303,12 +321,21 @@ export function subscribeNotifications(onChange = () => {}) {
   });
   realtimeSocket.addEventListener('close', () => {
     if (heartbeatTimer) window.clearInterval(heartbeatTimer);
-    if (conferenceRoomPollTimer) window.clearInterval(conferenceRoomPollTimer);
     heartbeatTimer = null;
-    conferenceRoomPollTimer = null;
     realtimeJoined = false;
+    setSyncStatus('offline');
+    queueRealtimeRefresh({ table: 'calendar_items', eventType: 'disconnect' }).catch(() => null);
+    if (!realtimeStopped && !realtimeReconnectTimer) {
+      realtimeReconnectTimer = window.setTimeout(() => {
+        realtimeReconnectTimer = null;
+        subscribeNotifications(onChange);
+      }, REALTIME_RECONNECT_MS);
+    }
   });
-  realtimeSocket.addEventListener('error', (error) => console.warn('Notification realtime unavailable:', error));
+  realtimeSocket.addEventListener('error', (error) => {
+    setSyncStatus('offline');
+    console.warn('Notification realtime unavailable:', error);
+  });
   return () => {
     if (realtimeSocket) stopRealtimeSocket();
   };
@@ -710,7 +737,9 @@ async function runRealtimeRefresh(tables = [], payload = {}) {
   const beforeKeys = knownNotificationKeys.size ? knownNotificationKeys : notificationKeySet();
   try {
     if (typeof context.refreshProvider === 'function') await context.refreshProvider({ tables, payload });
+    if (realtimeJoined) setSyncStatus('online');
   } catch (error) {
+    setSyncStatus('offline');
     console.warn('Notification realtime refresh failed:', error);
   }
   if (tables.includes('conference_room_bookings')) await mergeConferenceRoomBookings(payload).catch((error) => console.warn('Conference room notification refresh failed:', error));
@@ -730,6 +759,48 @@ async function runRealtimeRefresh(tables = [], payload = {}) {
 
 function notificationKeySet(notices = currentUserNotifications()) {
   return new Set(notices.map((notice) => notificationKey(notice)));
+}
+
+function startFallbackRefresh() {
+  if (fallbackRefreshTimer) window.clearInterval(fallbackRefreshTimer);
+  queueRealtimeRefresh({ table: 'calendar_items', eventType: 'startup' }).catch(() => null);
+  fallbackRefreshTimer = window.setInterval(() => {
+    queueRealtimeRefresh({ table: 'calendar_items', eventType: realtimeJoined ? 'fallback_poll' : 'offline_poll' }).catch(() => null);
+  }, FALLBACK_REFRESH_MS);
+}
+
+function setSyncStatus(status) {
+  const badge = ensureSyncStatusElement();
+  if (!badge) return;
+  window.clearTimeout(syncStatusTimer);
+  badge.dataset.syncStatus = status;
+  badge.hidden = false;
+  if (status === 'offline') {
+    badge.textContent = 'Offline';
+    return;
+  }
+  if (status === 'syncing') {
+    badge.textContent = 'Syncing...';
+    return;
+  }
+  badge.textContent = 'Synced';
+  syncStatusTimer = window.setTimeout(() => {
+    if (badge.dataset.syncStatus === 'online') badge.hidden = true;
+  }, 1200);
+}
+
+function ensureSyncStatusElement() {
+  if (typeof document === 'undefined') return null;
+  let badge = document.getElementById('calendarSyncStatus');
+  if (badge) return badge;
+  badge = document.createElement('div');
+  badge.id = 'calendarSyncStatus';
+  badge.hidden = true;
+  badge.setAttribute('role', 'status');
+  badge.setAttribute('aria-live', 'polite');
+  badge.textContent = 'Syncing...';
+  document.body.appendChild(badge);
+  return badge;
 }
 
 async function mergeConferenceRoomBookings(payload = {}) {
@@ -879,9 +950,9 @@ function sendRealtime(topic, event, payload, ref = String(realtimeRef++)) {
 
 function stopRealtimeSocket() {
   if (heartbeatTimer) window.clearInterval(heartbeatTimer);
-  if (conferenceRoomPollTimer) window.clearInterval(conferenceRoomPollTimer);
+  if (realtimeReconnectTimer) window.clearTimeout(realtimeReconnectTimer);
   heartbeatTimer = null;
-  conferenceRoomPollTimer = null;
+  realtimeReconnectTimer = null;
   realtimeJoined = false;
   try { realtimeSocket?.close(1000, 'notification realtime replaced'); } catch {}
   realtimeSocket = null;
