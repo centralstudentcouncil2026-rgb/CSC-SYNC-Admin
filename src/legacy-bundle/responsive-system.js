@@ -872,9 +872,16 @@
       body.admin-dashboard-shell.personal-calendar-perspective .brand-area,
       body.admin-dashboard-shell .calendar-nav,
       body.admin-dashboard-shell.personal-calendar-perspective .calendar-nav,
+      #conferenceRoomModal .conference-room-header > div:not(.conference-room-tools),
       .admin-tab-page .modal-header > div,
       #concernsModal[open] .modal-header > div {
         min-width: 0 !important;
+      }
+
+      #conferenceRoomModal .conference-room-header > div:not(.conference-room-tools) {
+        display: flex !important;
+        justify-content: center !important;
+        overflow: hidden !important;
       }
 
       body.admin-dashboard-shell #calendarTitle,
@@ -891,6 +898,7 @@
         text-align: center !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
+        width: 100% !important;
       }
 
       body.admin-dashboard-shell #mobileMenuButton,
