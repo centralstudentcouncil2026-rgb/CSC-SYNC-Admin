@@ -385,6 +385,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     else currentStore.events.push(booking);
     state()?.calendar?.refetchEvents?.();
     state()?.calendar?.render?.();
+    document.dispatchEvent(new CustomEvent('conference-room-bookings-updated', { detail: { deletedId: id, source: 'local-cancel' } }));
     window.dispatchEvent(new CustomEvent('csc:store-rendered'));
   }
   function hasStoredValue(value) {
@@ -1027,6 +1028,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     removeLocalBooking(booking.id);
     api().log?.('conference_room_booking_deleted', `${user().full_name} deleted a conference room booking.`, api().scheduleAuditSnapshot?.(booking) || booking);
     api().showToast?.('Conference room booking deleted.', 'success');
+    closeBookingDetails();
     refresh();
   }
   function resetConferenceRoomRuntime() {
@@ -1165,6 +1167,10 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     });
     document.getElementById('conferenceRoomReject')?.addEventListener('click', () => reviewBooking('rejected'));
     document.getElementById('conferenceRoomApprove')?.addEventListener('click', () => reviewBooking('approved'));
+    if (document.body.dataset.conferenceRoomBookingUpdateBound !== RUNTIME_VERSION) {
+      document.body.dataset.conferenceRoomBookingUpdateBound = RUNTIME_VERSION;
+      document.addEventListener('conference-room-bookings-updated', () => refresh());
+    }
   }
   function style() {
     if (document.getElementById('conference-room-booking-style')) return;

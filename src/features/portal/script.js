@@ -438,6 +438,11 @@ function renderAll() {
   if (!isPublic(state.store) && !notificationRuntimeStarted) void startNotificationRuntime();
 }
 
+document.addEventListener('conference-room-bookings-updated', () => {
+  refreshCalendar();
+  renderFilterOptions();
+});
+
 function renderRole() {
   const user = currentUser(state.store);
   document.body.classList.toggle('is-manager', isManager(state.store));
