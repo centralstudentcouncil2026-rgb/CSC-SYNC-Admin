@@ -840,6 +840,126 @@
         }
       }
 
+      :root {
+        --csc-shared-header-height: clamp(54px, 6vw, 76px);
+        --csc-shared-header-padding-x: clamp(8px, 1.4vw, 18px);
+        --csc-shared-header-gap: clamp(6px, 1vw, 12px);
+        --csc-shared-header-title: clamp(1rem, 2.2vw, 2rem);
+        --csc-shared-control-size: clamp(36px, 4.2vw, 52px);
+      }
+
+      body.admin-dashboard-shell .topbar,
+      body.admin-dashboard-shell.personal-calendar-perspective .topbar,
+      #conferenceRoomModal .conference-room-header,
+      .admin-tab-page .modal-header,
+      #concernsModal[open] .modal-header {
+        align-items: center !important;
+        box-sizing: border-box !important;
+        min-height: var(--csc-shared-header-height) !important;
+        overflow: hidden !important;
+        padding-block: clamp(6px, .9vw, 10px) !important;
+        padding-inline: var(--csc-shared-header-padding-x) !important;
+      }
+
+      body.admin-dashboard-shell .topbar,
+      body.admin-dashboard-shell.personal-calendar-perspective .topbar {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: var(--csc-shared-header-gap) !important;
+      }
+
+      body.admin-dashboard-shell .brand-area,
+      body.admin-dashboard-shell.personal-calendar-perspective .brand-area,
+      body.admin-dashboard-shell .calendar-nav,
+      body.admin-dashboard-shell.personal-calendar-perspective .calendar-nav,
+      .admin-tab-page .modal-header > div,
+      #concernsModal[open] .modal-header > div {
+        min-width: 0 !important;
+      }
+
+      body.admin-dashboard-shell #calendarTitle,
+      body.admin-dashboard-shell.personal-calendar-perspective #calendarTitle,
+      .admin-tab-page .modal-header h2,
+      .admin-tab-page .modal-header h3,
+      #concernsModal[open] .modal-header h3,
+      #conferenceRoomModal .conference-room-header h3 {
+        font-size: var(--csc-shared-header-title) !important;
+        line-height: 1.05 !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-align: center !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      body.admin-dashboard-shell #mobileMenuButton,
+      body.admin-dashboard-shell #prevButton,
+      body.admin-dashboard-shell #nextButton,
+      body.admin-dashboard-shell .notification-bell,
+      .admin-tab-page .portal-tab-back,
+      .admin-tab-page .modal-header .icon-button,
+      #concernsModal[open] .modal-header .icon-button,
+      #conferenceRoomModal #conferenceRoomBack,
+      #conferenceRoomModal .conference-room-nav-button,
+      #conferenceRoomModal .conference-room-notifications {
+        align-items: center !important;
+        aspect-ratio: 1 / 1 !important;
+        border-radius: 999px !important;
+        display: inline-flex !important;
+        flex: 0 0 var(--csc-shared-control-size) !important;
+        height: var(--csc-shared-control-size) !important;
+        justify-content: center !important;
+        max-height: var(--csc-shared-control-size) !important;
+        max-width: var(--csc-shared-control-size) !important;
+        min-height: var(--csc-shared-control-size) !important;
+        min-width: var(--csc-shared-control-size) !important;
+        padding: 0 !important;
+        width: var(--csc-shared-control-size) !important;
+      }
+
+      #conferenceRoomModal .conference-room-header {
+        display: grid !important;
+        gap: var(--csc-shared-header-gap) !important;
+        grid-template-columns: var(--csc-shared-control-size) minmax(0, 1fr) max-content !important;
+        width: 100% !important;
+      }
+
+      #conferenceRoomModal .conference-room-header h3 {
+        justify-self: center !important;
+      }
+
+      #conferenceRoomModal .conference-room-tools {
+        align-items: center !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: var(--csc-shared-header-gap) !important;
+        justify-content: flex-end !important;
+        min-width: max-content !important;
+      }
+
+      .admin-tab-page .modal-header {
+        gap: var(--csc-shared-header-gap) !important;
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --csc-shared-header-height: clamp(50px, 13vw, 58px);
+          --csc-shared-header-padding-x: clamp(6px, 2vw, 10px);
+          --csc-shared-header-gap: clamp(4px, 1.2vw, 7px);
+          --csc-shared-header-title: clamp(.9rem, 4.2vw, 1.15rem);
+          --csc-shared-control-size: clamp(34px, 9.5vw, 40px);
+        }
+
+        body.admin-dashboard-shell .brand-copy {
+          min-width: 0 !important;
+        }
+
+        #conferenceRoomModal .conference-room-tools {
+          gap: clamp(4px, 1vw, 6px) !important;
+        }
+      }
+
       body.portal-shell:not(.admin-tab-page-open),
       body.admin-dashboard-shell:not(.admin-tab-page-open),
       body.org-dashboard-shell:not(.admin-tab-page-open),
