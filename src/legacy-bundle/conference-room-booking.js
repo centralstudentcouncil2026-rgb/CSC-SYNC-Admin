@@ -716,7 +716,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     const attendees = bookingAttendees(booking);
     if (!attendees.length) return esc(attendeeListText(booking));
     const items = attendees.map((name) => `<li>${esc(name)}</li>`).join('');
-    return `<div class="conference-attendee-summary">${attendees.length} attendee${attendees.length === 1 ? '' : 's'}</div><ol class="conference-attendee-details">${items}</ol>`;
+    return `<details class="conference-attendee-dropdown"><summary>${attendees.length} attendee${attendees.length === 1 ? '' : 's'}</summary><ol class="conference-attendee-details">${items}</ol></details>`;
   }
   function buildBooking(form) {
     const current = user();
@@ -1176,8 +1176,12 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       .conference-room-detail-row{display:grid;grid-template-columns:minmax(108px,.45fr) minmax(0,1fr);gap:8px;border-bottom:1px solid #e2e8f0;padding:9px 0;}
       .conference-room-detail-row dt{color:#334155;font-size:.76rem;font-weight:900;text-transform:uppercase;}
       .conference-room-detail-row dd{color:#111827;margin:0;overflow-wrap:anywhere;}
-      .conference-attendee-summary{color:#475569;font-size:.82rem;font-weight:800;margin-bottom:5px;}
-      .conference-attendee-details{display:grid;gap:4px;margin:0;padding-left:1.1rem;}
+      .conference-attendee-dropdown{width:100%;}
+      .conference-attendee-dropdown summary{align-items:center;border:1px solid #cbd5e1;border-radius:12px;color:#111827;cursor:pointer;display:flex;font-weight:900;justify-content:space-between;list-style:none;min-height:38px;padding:8px 12px;user-select:none;}
+      .conference-attendee-dropdown summary::-webkit-details-marker{display:none;}
+      .conference-attendee-dropdown summary::after{color:#475569;content:'\\25BE';font-size:.8rem;margin-left:10px;}
+      .conference-attendee-dropdown[open] summary::after{transform:rotate(180deg);}
+      .conference-attendee-details{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;display:grid;gap:4px;margin:8px 0 0;padding:10px 12px 10px 1.8rem;}
       .conference-attendee-details li{padding-left:2px;}
       .conference-room-details-dialog footer{display:grid;grid-template-columns:auto 1fr auto auto;}
       @media(max-width:720px){.conference-room-header{grid-template-columns:40px minmax(0,1fr) auto!important;padding:9px 10px!important;}.conference-room-header h3{font-size:1rem!important;}.conference-room-tools{gap:6px!important;}.conference-room-tools .conference-room-nav-button,.conference-room-tools .conference-room-notifications{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}.conference-room-tools .conference-room-nav-button{font-size:1.45rem!important;}.conference-room-dialog .form-grid.two,.conference-room-detail-list{grid-template-columns:1fr;}.conference-room-details-dialog footer{grid-template-columns:1fr;}.conference-room-details-dialog footer span{display:none;}}
