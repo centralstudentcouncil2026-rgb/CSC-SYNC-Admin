@@ -1230,10 +1230,11 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     const css = document.createElement('style');
     css.id = 'conference-room-booking-style';
     css.textContent = `
-      .conference-room-page{border-radius:0!important;overflow:hidden!important;}
-      .conference-room-page.is-active{display:block!important;overflow:hidden!important;border-radius:0!important;}
-      .conference-room-card{height:100dvh!important;min-height:100dvh!important;width:100vw!important;max-width:none!important;margin:0!important;padding:0!important;border-radius:0!important;overflow:hidden!important;}
-      .conference-room-header{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;gap:12px!important;background:linear-gradient(135deg,#facc15 0%,#eab308 62%,#ca8a04 100%)!important;border-bottom:1px solid #2563eb!important;border-radius:0!important;margin:0!important;min-height:58px!important;padding:12px 18px!important;width:100vw!important;}
+      #conferenceRoomModal.conference-room-page[hidden]{display:none!important;pointer-events:none!important;visibility:hidden!important;}
+      #conferenceRoomModal.conference-room-page{border-radius:0!important;}
+      #conferenceRoomModal.conference-room-page.is-active{background:#f8fafc!important;border-radius:0!important;display:block!important;height:100dvh!important;inset:0!important;left:0!important;margin:0!important;max-height:none!important;max-width:none!important;min-height:100dvh!important;min-width:100dvw!important;overflow:hidden!important;padding:0!important;position:fixed!important;right:0!important;top:0!important;transform:none!important;width:100dvw!important;z-index:2147483500!important;}
+      #conferenceRoomModal .conference-room-card{box-sizing:border-box!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;height:100dvh!important;max-height:none!important;max-width:none!important;min-height:100dvh!important;min-width:100dvw!important;width:100dvw!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;}
+      #conferenceRoomModal .conference-room-header{box-sizing:border-box!important;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;gap:12px!important;background:linear-gradient(135deg,#facc15 0%,#eab308 62%,#ca8a04 100%)!important;border-bottom:1px solid #2563eb!important;border-radius:0!important;margin:0!important;min-height:58px!important;padding:12px 18px!important;width:100dvw!important;}
       body.admin-tab-page-open:has(.conference-room-page.is-active){border-radius:0!important;overflow:hidden!important;}
       .conference-room-header h3{margin:0!important;font-size:clamp(1.05rem,1.6vw,1.35rem)!important;}
       .conference-room-tools{display:flex!important;gap:10px!important;align-items:center!important;}
@@ -1243,8 +1244,15 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       .conference-room-header #conferenceRoomBack{align-items:center!important;color:#0f172a!important;display:inline-flex!important;font-family:Arial,Helvetica,sans-serif!important;font-size:0!important;font-weight:900!important;height:40px!important;justify-content:center!important;line-height:1!important;min-height:40px!important;min-width:40px!important;overflow:hidden!important;padding:0!important;text-indent:0!important;width:40px!important;}
       .conference-room-header #conferenceRoomBack::before{content:none!important;display:none!important;}
       .conference-room-header #conferenceRoomBack::after{color:#0f172a!important;content:'\\2190'!important;display:block!important;font-family:Arial,Helvetica,sans-serif!important;font-size:22px!important;font-weight:900!important;line-height:1!important;text-indent:0!important;}
-      .conference-room-body{height:calc(100dvh - 58px)!important;padding:10px!important;background:#f8fafc!important;}
-      #conferenceRoomCalendar{height:100%!important;background:#fff!important;border:1px solid #dbe4ef!important;border-radius:14px!important;overflow:hidden!important;}
+      #conferenceRoomModal .conference-room-body{box-sizing:border-box!important;height:calc(100dvh - 58px)!important;min-height:0!important;overflow:hidden!important;padding:10px!important;background:#f8fafc!important;width:100dvw!important;}
+      #conferenceRoomCalendar{box-sizing:border-box!important;display:block!important;height:calc(100dvh - 78px)!important;min-height:320px!important;max-height:calc(100dvh - 78px)!important;max-width:none!important;width:100%!important;background:#fff!important;border:1px solid #dbe4ef!important;border-radius:14px!important;overflow:hidden!important;}
+      #conferenceRoomCalendar .fc,
+      #conferenceRoomCalendar .fc-view-harness,
+      #conferenceRoomCalendar .fc-view-harness-active,
+      #conferenceRoomCalendar .fc-scrollgrid{box-sizing:border-box!important;height:100%!important;max-height:100%!important;max-width:none!important;min-height:0!important;width:100%!important;}
+      #conferenceRoomCalendar .fc-scrollgrid table,#conferenceRoomCalendar .fc-col-header,#conferenceRoomCalendar .fc-timegrid-body,#conferenceRoomCalendar .fc-timegrid-body table{width:100%!important;max-width:100%!important;}
+      #conferenceRoomCalendar .fc-timegrid-slot{height:2.15rem!important;}
+      #conferenceRoomCalendar .fc-timegrid-event{max-width:100%!important;overflow:hidden!important;}
       .conference-room-dialog{border:0;border-radius:22px;padding:0;max-width:min(560px,calc(100vw - 24px));width:560px;box-shadow:0 24px 80px rgba(15,23,42,.22);}
       .conference-room-dialog::backdrop{background:rgba(15,23,42,.42);}
       .conference-room-dialog form{display:grid;gap:14px;max-height:min(86vh,720px);overflow:auto;padding:18px;}
@@ -1275,7 +1283,8 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       .conference-attendee-details{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;display:grid;gap:4px;margin:8px 0 0;padding:10px 12px 10px 1.8rem;}
       .conference-attendee-details li{padding-left:2px;}
       .conference-room-details-dialog footer{display:grid;grid-template-columns:auto 1fr auto auto;}
-      @media(max-width:720px){.conference-room-header{grid-template-columns:40px minmax(0,1fr) auto!important;padding:9px 10px!important;}.conference-room-header h3{font-size:1rem!important;}.conference-room-tools{gap:6px!important;}.conference-room-tools .conference-room-nav-button,.conference-room-tools .conference-room-notifications{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}.conference-room-tools .conference-room-nav-button{font-size:1.45rem!important;}.conference-room-dialog .form-grid.two,.conference-room-detail-list{grid-template-columns:1fr;}.conference-room-details-dialog footer{grid-template-columns:1fr;}.conference-room-details-dialog footer span{display:none;}}
+      @media(max-width:900px){#conferenceRoomCalendar .fc-timegrid-slot{height:2.35rem!important;}#conferenceRoomCalendar .fc-col-header-cell-cushion{font-size:.76rem!important;padding:4px 1px!important;}#conferenceRoomCalendar .fc-timegrid-slot-label,#conferenceRoomCalendar .fc-event-time,#conferenceRoomCalendar .fc-event-title{font-size:.72rem!important;line-height:1.12!important;}}
+      @media(max-width:720px){#conferenceRoomModal .conference-room-header{grid-template-columns:40px minmax(0,1fr) auto!important;padding:9px 10px!important;}#conferenceRoomModal .conference-room-header h3{font-size:1rem!important;}.conference-room-tools{gap:6px!important;}.conference-room-tools .conference-room-nav-button,.conference-room-tools .conference-room-notifications{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}.conference-room-tools .conference-room-nav-button{font-size:1.45rem!important;}#conferenceRoomModal .conference-room-body{height:calc(100dvh - 54px)!important;padding:8px!important;}#conferenceRoomCalendar{height:calc(100dvh - 70px)!important;max-height:calc(100dvh - 70px)!important;min-height:300px!important;}#conferenceRoomCalendar .fc-timegrid-slot{height:2.55rem!important;}.conference-room-dialog .form-grid.two,.conference-room-detail-list{grid-template-columns:1fr;}.conference-room-details-dialog footer{grid-template-columns:1fr;}.conference-room-details-dialog footer span{display:none;}}
     `;
     document.head.appendChild(css);
   }
@@ -1387,6 +1396,16 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     style();
     ensureUi();
     window.addEventListener('csc:store-rendered', refresh);
+    if (document.body.dataset.conferenceRoomViewportBound !== RUNTIME_VERSION) {
+      document.body.dataset.conferenceRoomViewportBound = RUNTIME_VERSION;
+      window.addEventListener('resize', resizeCalendarSoon, { passive: true });
+      window.addEventListener('orientationchange', () => {
+        resizeCalendarSoon();
+        setTimeout(resizeCalendarSoon, 260);
+        setTimeout(resizeCalendarSoon, 700);
+      }, { passive: true });
+      window.visualViewport?.addEventListener('resize', resizeCalendarSoon, { passive: true });
+    }
     restorePageAfterReload();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

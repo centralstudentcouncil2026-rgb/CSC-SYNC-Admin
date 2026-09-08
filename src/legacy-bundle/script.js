@@ -28,6 +28,7 @@ import {
 } from './notification-service.js?v=20260819-duplex-notifications-v1';
 
 const MOBILE_BREAKPOINT = 768;
+const TABLET_BREAKPOINT = 1024;
 const MAIN_CALENDAR_VIEWS = new Set(['dayGridMonth', 'multiMonthYear']);
 const PERSONAL_CALENDAR_VIEWS = new Set(['dayGridMonth', 'timeGridWeek', 'timeGridDay', 'multiMonthYear']);
 const WEEK_SLOT_START_MINUTES = 6 * 60;
@@ -633,6 +634,7 @@ function initializeCalendar() {
     eventDrop: persistMovedCalendarItem, eventResize: persistMovedCalendarItem
   });
   state.calendar.render();
+  applyResponsiveCalendarOptions();
   bindCalendarEventDetailsFallback();
   bindMobileCalendarTapFallback();
   bindCalendarResizeObserver();
@@ -4022,6 +4024,7 @@ function changeView(view) {
   state.portalViewMode = isPublic(state.store) ? 'dayGridMonth' : nextView;
   state.currentView = calendarViewMode(state.portalViewMode);
   state.calendar.changeView(state.portalViewMode);
+  applyResponsiveCalendarOptions();
   const selector = $('viewSelector');
   if (selector) selector.value = portalSelectorValue();
   scheduleDashboardReloadStateSave();
@@ -4045,11 +4048,14 @@ function bindCalendarResizeObserver() {
   if (!panel) return;
   state.resizeObserver = new ResizeObserver(() => scheduleCalendarResize(60));
   state.resizeObserver.observe(panel);
+  const shell = document.querySelector('.portal-layout,.calendar-panel,#calendar');
+  if (shell && shell !== panel) state.resizeObserver.observe(shell);
 }
 function scheduleCalendarResize(delay = 0) {
   clearTimeout(state.resizeTimer);
   state.resizeTimer = setTimeout(() => {
     if (!state.calendar) return;
+    applyResponsiveCalendarOptions();
     state.calendar.updateSize();
     requestAnimationFrame(() => state.calendar && state.calendar.updateSize());
   }, delay);
@@ -4059,7 +4065,22 @@ function handleResize() {
   closePublicDayDialog();
   closeSidebar();
   if (!activeCalendarViews().has(state.calendar.view.type)) state.calendar.changeView('dayGridMonth');
+  applyResponsiveCalendarOptions();
   scheduleCalendarResize(0);
+}
+function responsiveCalendarHeight() {
+  if (window.innerWidth <= 430) return Math.max(520, Math.round((window.visualViewport?.height || window.innerHeight || 720) - 190));
+  if (window.innerWidth <= MOBILE_BREAKPOINT) return Math.max(560, Math.round((window.visualViewport?.height || window.innerHeight || 820) - 210));
+  if (window.innerWidth <= TABLET_BREAKPOINT) return Math.max(620, Math.round((window.visualViewport?.height || window.innerHeight || 900) - 230));
+  return '100%';
+}
+function applyResponsiveCalendarOptions() {
+  const calendar = state.calendar;
+  if (!calendar?.setOption) return;
+  calendar.setOption('height', responsiveCalendarHeight());
+  calendar.setOption('contentHeight', responsiveCalendarHeight());
+  calendar.setOption('handleWindowResize', true);
+  calendar.setOption('windowResizeDelay', 80);
 }
 function openSidebar() { $('sidebar').classList.add('open'); $('mobileScrim').classList.add('open'); }
 function closeSidebar() { $('sidebar').classList.remove('open'); $('mobileScrim').classList.remove('open'); }
