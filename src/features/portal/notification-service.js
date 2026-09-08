@@ -5,6 +5,7 @@ const READ_STORAGE_PREFIX = 'csc_sync_notification_read_v2';
 const REALTIME_TABLES = ['calendar_items', 'announcements', 'concerns', 'conference_room_bookings', 'profiles'];
 const REALTIME_REFRESH_DELAY_MS = 180;
 const REALTIME_HEARTBEAT_MS = 25000;
+const CONFERENCE_ROOM_POLL_MS = 5000;
 const NOTIFICATION_FILTERS = ['all', 'unread', 'schedules', 'concerns', 'announcements', 'accounts'];
 
 let context = {};
@@ -12,6 +13,7 @@ let schemaMode = '';
 let realtimeSocket = null;
 let realtimeRef = 1;
 let heartbeatTimer = null;
+let conferenceRoomPollTimer = null;
 let realtimeJoined = false;
 let refreshTimer = null;
 let refreshPromise = null;
@@ -274,6 +276,10 @@ export function subscribeNotifications(onChange = () => {}) {
   const socketUrl = `${String(config.url).replace(/^http/i, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(key)}&vsn=1.0.0`;
   const topic = `realtime:csc-sync-notifications:${currentUser().id || currentUser().organization_id || 'user'}`;
   const postgresChanges = REALTIME_TABLES.map((table) => ({ event: '*', schema: 'public', table }));
+  queueRealtimeRefresh({ table: 'conference_room_bookings', eventType: 'poll' }).catch(() => null);
+  conferenceRoomPollTimer = window.setInterval(() => {
+    queueRealtimeRefresh({ table: 'conference_room_bookings', eventType: 'poll' }).catch(() => null);
+  }, CONFERENCE_ROOM_POLL_MS);
   realtimeSocket = new WebSocket(socketUrl);
   realtimeSocket.addEventListener('open', () => {
     realtimeJoined = false;
@@ -297,7 +303,9 @@ export function subscribeNotifications(onChange = () => {}) {
   });
   realtimeSocket.addEventListener('close', () => {
     if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+    if (conferenceRoomPollTimer) window.clearInterval(conferenceRoomPollTimer);
     heartbeatTimer = null;
+    conferenceRoomPollTimer = null;
     realtimeJoined = false;
   });
   realtimeSocket.addEventListener('error', (error) => console.warn('Notification realtime unavailable:', error));
@@ -839,6 +847,9 @@ function highlightReference(id) {
 }
 
 async function rest(endpoint, options = {}, authenticated = false) {
+  if (authenticated) {
+    try { await ensureFreshSession(); } catch {}
+  }
   const config = window.SUPABASE_CONFIG || {};
   const key = supabaseKey(config);
   const token = authenticated ? session()?.access_token : key;
@@ -868,7 +879,9 @@ function sendRealtime(topic, event, payload, ref = String(realtimeRef++)) {
 
 function stopRealtimeSocket() {
   if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+  if (conferenceRoomPollTimer) window.clearInterval(conferenceRoomPollTimer);
   heartbeatTimer = null;
+  conferenceRoomPollTimer = null;
   realtimeJoined = false;
   try { realtimeSocket?.close(1000, 'notification realtime replaced'); } catch {}
   realtimeSocket = null;
@@ -903,8 +916,48 @@ function isOrgUser(user = {}) {
 }
 
 function session() {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || 'null'); }
   catch { return null; }
+}
+
+function saveSession(payload) {
+  const serialized = JSON.stringify(payload);
+  try { sessionStorage.setItem(SESSION_KEY, serialized); } catch {}
+  try { localStorage.setItem(SESSION_KEY, serialized); } catch {}
+}
+
+function sessionExpiryMs(value = session()) {
+  const stored = Number(value?.expires_at || 0);
+  if (stored) return stored * 1000;
+  const parts = String(value?.access_token || '').split('.');
+  if (parts.length < 2) return 0;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return Number(payload?.exp || 0) * 1000;
+  } catch {
+    return 0;
+  }
+}
+
+function sessionNeedsRefresh(value = session()) {
+  const expiry = sessionExpiryMs(value);
+  return Boolean(value?.access_token && value?.refresh_token && expiry && expiry <= Date.now() + 60000);
+}
+
+async function ensureFreshSession() {
+  if (!sessionNeedsRefresh()) return;
+  const refreshToken = session()?.refresh_token;
+  if (!refreshToken) return;
+  const config = window.SUPABASE_CONFIG || {};
+  const key = supabaseKey(config);
+  if (!config.url || !key) return;
+  const response = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (response.ok && payload?.access_token) saveSession(payload);
 }
 
 function createId() {
