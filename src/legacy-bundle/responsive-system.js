@@ -543,7 +543,12 @@
         width: 100% !important;
       }
 
+      body.personal-calendar-perspective #calendar {
+        display: none !important;
+      }
+
       body.personal-calendar-perspective #personalCalendarHost {
+        display: block !important;
         overflow: hidden !important;
       }
 
