@@ -8,6 +8,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   const PAGE_ID = 'conferenceRoomModal';
   const BUTTON_ID = 'conferenceRoomButton';
   const ACTIVE_KEY = 'csc_conference_room_active_admin';
+  const SESSION_KEY = 'core_supabase_auth_session';
   const CALENDAR_ID = 'conferenceRoomCalendar';
   const FORM_ID = 'conferenceRoomForm';
   const DETAILS_ID = 'conferenceRoomDetailsDialog';
@@ -223,9 +224,50 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   function reservedConflict(startTime, endTime, ignoreId = '') {
     return bookingConflict(startTime, endTime, ignoreId, ['pending', 'approved']);
   }
+  function storedSessionValue() {
+    try { return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || 'null'; }
+    catch { return 'null'; }
+  }
   function session() {
-    try { return JSON.parse(sessionStorage.getItem('core_supabase_auth_session') || 'null'); }
+    try { return JSON.parse(storedSessionValue()); }
     catch { return null; }
+  }
+  function saveSession(payload) {
+    const serialized = JSON.stringify(payload);
+    try { sessionStorage.setItem(SESSION_KEY, serialized); } catch {}
+    try { localStorage.setItem(SESSION_KEY, serialized); } catch {}
+  }
+  function sessionExpiryMs(value = session()) {
+    const stored = Number(value?.expires_at || 0);
+    if (stored) return stored * 1000;
+    const token = String(value?.access_token || '');
+    const parts = token.split('.');
+    if (parts.length < 2) return 0;
+    try {
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return Number(payload?.exp || 0) * 1000;
+    } catch { return 0; }
+  }
+  function sessionNeedsRefresh(value = session()) {
+    const expiry = sessionExpiryMs(value);
+    return Boolean(value?.access_token && value?.refresh_token && expiry && expiry <= Date.now() + 60000);
+  }
+  async function refreshSession() {
+    const refreshToken = session()?.refresh_token;
+    if (!refreshToken) throw new Error('Your session expired. Please log in again.');
+    const key = supabaseKey();
+    const response = await fetch(`${supabaseUrl()}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.access_token) throw new Error(payload?.message || payload?.error_description || payload?.error || 'Your session expired. Please log in again.');
+    saveSession(payload);
+    return payload;
+  }
+  async function ensureFreshSession() {
+    if (sessionNeedsRefresh()) await refreshSession();
   }
   function isReloadNavigation() {
     const entry = performance.getEntriesByType?.('navigation')?.[0];
@@ -328,6 +370,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   }
   async function saveBookingToDatabase(booking) {
     if (!supabaseUrl() || !supabaseKey()) throw new Error('Supabase config is missing for conference room booking.');
+    await ensureFreshSession();
     let row = dbRow(booking);
     const strippedColumns = new Set();
     const existingBooking = (store()?.events || []).some((event) => event.id === booking.id);
@@ -340,6 +383,10 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       if (response.ok) {
         if (strippedColumns.size) console.warn('CONNECT conference room save skipped unsupported columns:', [...strippedColumns]);
         return;
+      }
+      if (response.status === 401 && session()?.refresh_token) {
+        await refreshSession();
+        continue;
       }
       const payload = await response.json().catch(() => ({}));
       console.warn('CONNECT conference room save failed:', payload, row);
@@ -479,6 +526,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     window.dispatchEvent(new CustomEvent('csc:store-rendered'));
   }
   async function fetchConferenceBookings(authenticated = Boolean(session()?.access_token)) {
+    if (authenticated) await ensureFreshSession();
     const response = await fetch(`${supabaseUrl()}/rest/v1/conference_room_bookings?select=*&order=start_time.asc`, {
       headers: dbReadHeaders(authenticated)
     });
@@ -515,6 +563,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   async function deleteBookingFromDatabase(booking) {
     if (!booking?.id) throw new Error('Conference room booking id is missing.');
     if (!supabaseUrl() || !supabaseKey()) throw new Error('Supabase config is missing for conference room booking.');
+    await ensureFreshSession();
     const response = await fetch(bookingSaveUrl(booking.id, true), {
       method: 'DELETE',
       headers: dbHeaders()
@@ -536,6 +585,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   }
   async function databaseBookingConflict(startTime, endTime, ignoreId = '', statuses = ['pending', 'approved']) {
     if (!supabaseUrl() || !supabaseKey()) return null;
+    try { await ensureFreshSession(); } catch { return null; }
     const params = new URLSearchParams({
       select: 'id,title,organization_name,start_time,end_time,occurrences,approval_status,event_status,venue,schedule_type',
       record_type: 'eq.schedule',
