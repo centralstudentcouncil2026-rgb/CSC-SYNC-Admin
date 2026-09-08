@@ -4252,11 +4252,11 @@ function ensureAnnouncementPopupStyles() {
       .announcement-popup-modal{inset:0!important;display:grid!important;place-items:center!important;width:100dvw!important;height:100dvh!important;max-width:none!important;max-height:none!important;padding:14px!important}
       .announcement-popup-modal .announcement-popup-card{width:min(420px,100%)!important;max-height:calc(100dvh - 28px)!important;border-radius:22px!important;overflow:auto!important}
       .announcement-popup-modal .modal-header{align-items:center!important;gap:12px!important;padding:18px 18px 12px!important}
-      .announcement-popup-modal .modal-header h3{font-size:clamp(1.8rem,10vw,2.45rem)!important;line-height:1.05!important;overflow-wrap:anywhere!important}
-      .announcement-popup-modal .modal-header .icon-button{height:54px!important;min-height:54px!important;min-width:54px!important;width:54px!important}
+      .announcement-popup-modal .modal-header h3{font-size:clamp(1.45rem,7vw,1.85rem)!important;line-height:1.08!important;overflow-wrap:anywhere!important}
+      .announcement-popup-modal .modal-header .icon-button{height:48px!important;min-height:48px!important;min-width:48px!important;width:48px!important}
       .announcement-popup-modal .announcement-popup-body{padding:18px!important}
-      .announcement-popup-modal .announcement-popup-body p{font-size:clamp(1rem,5vw,1.2rem)!important}
-      .announcement-popup-modal .announcement-source{font-size:clamp(1rem,5.2vw,1.22rem)!important}
+      .announcement-popup-modal .announcement-popup-body p{font-size:clamp(.95rem,4.2vw,1.05rem)!important}
+      .announcement-popup-modal .announcement-source{font-size:clamp(.95rem,4.2vw,1.05rem)!important}
       .announcement-popup-modal .modal-actions{justify-content:center!important;padding:12px 18px 22px!important}
       .announcement-popup-modal .modal-actions .primary-button{min-width:116px!important}
     }
