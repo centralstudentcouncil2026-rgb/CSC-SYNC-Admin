@@ -4241,10 +4241,25 @@ function ensureAnnouncementPopupStyles() {
   const style = document.createElement('style');
   style.id = 'announcement-popup-style';
   style.textContent = `
-    .announcement-popup-modal .announcement-popup-card{width:min(92vw,440px);max-height:min(82vh,520px);overflow:auto}
+    .announcement-popup-modal{border:0;background:transparent;color:var(--aup-text,#0f172a);margin:auto;padding:0;max-width:none;max-height:none;width:min(92vw,440px)}
+    .announcement-popup-modal[open]{display:grid;place-items:center}
+    .announcement-popup-modal::backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(3px)}
+    .announcement-popup-modal .announcement-popup-card{box-sizing:border-box;width:100%;max-height:min(82dvh,520px);overflow:auto}
     .announcement-popup-modal .announcement-popup-body{display:grid;gap:10px;padding:16px 0}
     .announcement-popup-modal .announcement-popup-body p{margin:0;line-height:1.5;overflow-wrap:anywhere}
     .announcement-popup-modal .announcement-source{color:var(--aup-muted,#64748b);font-size:.92rem}
+    @media(max-width:768px){
+      .announcement-popup-modal{inset:0!important;display:grid!important;place-items:center!important;width:100dvw!important;height:100dvh!important;max-width:none!important;max-height:none!important;padding:14px!important}
+      .announcement-popup-modal .announcement-popup-card{width:min(420px,100%)!important;max-height:calc(100dvh - 28px)!important;border-radius:22px!important;overflow:auto!important}
+      .announcement-popup-modal .modal-header{align-items:center!important;gap:12px!important;padding:18px 18px 12px!important}
+      .announcement-popup-modal .modal-header h3{font-size:clamp(1.8rem,10vw,2.45rem)!important;line-height:1.05!important;overflow-wrap:anywhere!important}
+      .announcement-popup-modal .modal-header .icon-button{height:54px!important;min-height:54px!important;min-width:54px!important;width:54px!important}
+      .announcement-popup-modal .announcement-popup-body{padding:18px!important}
+      .announcement-popup-modal .announcement-popup-body p{font-size:clamp(1rem,5vw,1.2rem)!important}
+      .announcement-popup-modal .announcement-source{font-size:clamp(1rem,5.2vw,1.22rem)!important}
+      .announcement-popup-modal .modal-actions{justify-content:center!important;padding:12px 18px 22px!important}
+      .announcement-popup-modal .modal-actions .primary-button{min-width:116px!important}
+    }
   `;
   document.head.appendChild(style);
 }
