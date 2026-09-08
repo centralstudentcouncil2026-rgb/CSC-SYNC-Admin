@@ -159,8 +159,9 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     return 'monthly';
   }
   function repeatUntilLabel(booking = {}) {
+    if (repeatLabel(booking) === 'Does not repeat') return '';
     const explicit = dateOnly(booking.repeat_until || booking.recurrence_until);
-    if (explicit) return explicit;
+    if (explicit && explicit !== '1970-01-01') return explicit;
     const occurrences = bookingOccurrences(booking);
     return occurrences.length > 1 ? dateOnly(occurrences[occurrences.length - 1].start_time || occurrences[occurrences.length - 1].date) : '';
   }
@@ -711,6 +712,12 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     const attendees = bookingAttendees(booking);
     return attendees.length ? attendees.join(', ') : `${Math.max(1, Number.parseInt(booking.expected_attendees, 10) || 1)} attendee(s)`;
   }
+  function attendeeListHtml(booking = {}) {
+    const attendees = bookingAttendees(booking);
+    if (!attendees.length) return esc(attendeeListText(booking));
+    const items = attendees.map((name) => `<li>${esc(name)}</li>`).join('');
+    return `<div class="conference-attendee-summary">${attendees.length} attendee${attendees.length === 1 ? '' : 's'}</div><ol class="conference-attendee-details">${items}</ol>`;
+  }
   function buildBooking(form) {
     const current = user();
     const startTime = localIso(form.start.value);
@@ -889,6 +896,10 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     const text = value == null || String(value).trim() === '' ? 'Not provided' : String(value);
     return `<div class="conference-room-detail-row"><dt>${esc(label)}</dt><dd>${esc(text)}</dd></div>`;
   }
+  function detailRowHtml(label, value) {
+    const html = value == null || String(value).trim() === '' ? 'Not provided' : String(value);
+    return `<div class="conference-room-detail-row"><dt>${esc(label)}</dt><dd>${html}</dd></div>`;
+  }
   function openBookingDetails(booking, occurrence = null) {
     if (!booking) return;
     ensureUi();
@@ -908,7 +919,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       detailRow('End', dateTime(occurrence?.end_time || booking.end_time)),
       detailRow('Repeat', repeatLabel(booking)),
       detailRow('Repeat Until', repeatUntilLabel(booking)),
-      detailRow('List of Attendees', attendeeListText(booking)),
+      detailRowHtml('List of Attendees', attendeeListHtml(booking)),
       detailRow('Contact Person', bookingContactPerson(booking)),
       detailRow('Contact Info', bookingContactInfo(booking)),
       detailRow('Submitted', dateTime(booking.created_at)),
@@ -1165,6 +1176,9 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       .conference-room-detail-row{display:grid;grid-template-columns:minmax(108px,.45fr) minmax(0,1fr);gap:8px;border-bottom:1px solid #e2e8f0;padding:9px 0;}
       .conference-room-detail-row dt{color:#334155;font-size:.76rem;font-weight:900;text-transform:uppercase;}
       .conference-room-detail-row dd{color:#111827;margin:0;overflow-wrap:anywhere;}
+      .conference-attendee-summary{color:#475569;font-size:.82rem;font-weight:800;margin-bottom:5px;}
+      .conference-attendee-details{display:grid;gap:4px;margin:0;padding-left:1.1rem;}
+      .conference-attendee-details li{padding-left:2px;}
       .conference-room-details-dialog footer{display:grid;grid-template-columns:auto 1fr auto auto;}
       @media(max-width:720px){.conference-room-header{grid-template-columns:40px minmax(0,1fr) auto!important;padding:9px 10px!important;}.conference-room-header h3{font-size:1rem!important;}.conference-room-tools{gap:6px!important;}.conference-room-tools .conference-room-nav-button,.conference-room-tools .conference-room-notifications{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}.conference-room-tools .conference-room-nav-button{font-size:1.45rem!important;}.conference-room-dialog .form-grid.two,.conference-room-detail-list{grid-template-columns:1fr;}.conference-room-details-dialog footer{grid-template-columns:1fr;}.conference-room-details-dialog footer span{display:none;}}
     `;
