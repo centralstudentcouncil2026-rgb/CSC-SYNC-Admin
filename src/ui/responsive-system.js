@@ -962,6 +962,47 @@
         min-height: 0 !important;
       }
 
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tbody,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tbody,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tbody,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tbody,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tbody,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tbody,
+      body.public-shell #calendar .fc-daygrid-body tbody,
+      body.public-shell #calendar .fc-scrollgrid-sync-table tbody,
+      body.public-shell #publicCalendar .fc-daygrid-body tbody,
+      body.public-shell #publicCalendar .fc-scrollgrid-sync-table tbody,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body tbody,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid-sync-table tbody {
+        height: 100% !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tr,
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tr,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tr,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tr,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-body tr,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-scrollgrid-sync-table tr,
+      body.public-shell #calendar .fc-daygrid-body tr,
+      body.public-shell #calendar .fc-scrollgrid-sync-table tr,
+      body.public-shell #publicCalendar .fc-daygrid-body tr,
+      body.public-shell #publicCalendar .fc-scrollgrid-sync-table tr,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-body tr,
+      body.personal-calendar-perspective #personalCalendarHost .fc-scrollgrid-sync-table tr {
+        height: auto !important;
+        min-height: 0 !important;
+      }
+
+      body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-top,
+      body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-top,
+      body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-top,
+      body.public-shell #calendar .fc-daygrid-day-top,
+      body.public-shell #publicCalendar .fc-daygrid-day-top,
+      body.personal-calendar-perspective #personalCalendarHost .fc-daygrid-day-top {
+        line-height: 1 !important;
+        min-height: 0 !important;
+      }
+
       body.portal-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
       body.admin-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
       body.org-dashboard-shell:not(.admin-tab-page-open) #calendar .fc-daygrid-day-frame,
