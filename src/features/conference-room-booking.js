@@ -24,6 +24,7 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
   ]);
   let calendar = null;
   let selectedRange = null;
+  let lastCalendarTapCreateAt = 0;
 
   function api() { return window.CSCPortalApi || {}; }
   function state() { return window.CONNECT_STATE; }
@@ -793,9 +794,43 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
     ensureFormValues(range);
     document.getElementById('conferenceRoomDialog')?.showModal?.();
   }
+  function openFormFromCalendarTap(range) {
+    if (!range || Date.now() - lastCalendarTapCreateAt < 450) return;
+    lastCalendarTapCreateAt = Date.now();
+    openForm(range);
+  }
   function closeForm() {
     document.getElementById('conferenceRoomDialog')?.close?.();
     selectedRange = null;
+  }
+  function bookingRangeFromClick(event) {
+    if (event.target.closest('.fc-event,.fc-more-link,.fc-popover,button,a,input,select,textarea,[role="button"]')) return null;
+    const calendarEl = document.getElementById(CALENDAR_ID);
+    const dateColumn = [...(calendarEl?.querySelectorAll('.fc-timegrid-col[data-date],.fc-col-header-cell[data-date],.fc-daygrid-day[data-date]') || [])].find((node) => {
+      const rect = node.getBoundingClientRect();
+      return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+    });
+    const date = dateColumn?.dataset.date || event.target.closest('[data-date]')?.dataset.date || '';
+    if (!date) return null;
+    const timeSlot = [...(calendarEl?.querySelectorAll('.fc-timegrid-slot[data-time]') || [])].find((node) => {
+      const rect = node.getBoundingClientRect();
+      return event.clientY >= rect.top && event.clientY <= rect.bottom;
+    });
+    const time = timeSlot?.dataset.time?.slice(0, 5) || '09:00';
+    const start = new Date(`${date}T${time}:00`);
+    if (Number.isNaN(start.getTime())) return null;
+    return { start, end: new Date(start.getTime() + 60 * 60 * 1000) };
+  }
+  function bindCalendarTapCreateFallback(target) {
+    if (!target || target.dataset.conferenceTapCreateBound === '1') return;
+    target.dataset.conferenceTapCreateBound = '1';
+    target.addEventListener('click', (event) => {
+      if (!document.getElementById(PAGE_ID)?.classList.contains('is-active')) return;
+      const range = bookingRangeFromClick(event);
+      if (!range) return;
+      event.preventDefault();
+      openFormFromCalendarTap(range);
+    }, true);
   }
   function ensureFormValues(range) {
     const form = document.getElementById(FORM_ID);
@@ -1176,12 +1211,14 @@ import { accountLoginEmail, currentUser, isManager, isSuperAdmin, overlaps } fro
       allDaySlot: false,
       height: '100%',
       select: (info) => openForm({ start: info.start, end: info.end }),
+      dateClick: (info) => openFormFromCalendarTap({ start: info.date, end: new Date(info.date.getTime() + 60 * 60 * 1000) }),
       eventClick: (info) => openBookingDetails(info.event.extendedProps.booking, info.event.extendedProps.occurrence),
       eventDrop: async (info) => moveBooking(info),
       eventResize: async (info) => moveBooking(info),
       events: renderEvents()
     });
     calendar.render();
+    bindCalendarTapCreateFallback(target);
     resizeCalendarSoon();
   }
   function resizeCalendarSoon() {
