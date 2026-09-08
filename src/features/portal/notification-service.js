@@ -33,7 +33,7 @@ export function notificationContext() {
 
 export function currentUserNotifications() {
   const user = currentUser();
-  const notices = derivedNotifications(user);
+  const notices = derivedNotifications(user).filter((notice) => noticeVisibleToUser(notice, user));
   return dedupeNotifications(notices).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
 
@@ -599,10 +599,17 @@ function rawStoreNotifications() {
 
 function noticeVisibleToUser(notice, user) {
   if (isAdmin()) return !notice.recipient_type || notice.recipient_type === 'admin' || notice.user_id === user.id;
+  if (isConferenceSubmittedNotice(notice)) return false;
   if (notice.recipient_type === 'all_organizations') return true;
   if (notice.user_id && notice.user_id === user.id) return true;
   if (notice.recipient_id && (notice.recipient_id === user.id || notice.recipient_id === user.organization_id)) return true;
   return false;
+}
+
+function isConferenceSubmittedNotice(notice = {}) {
+  const type = String(notice.notification_type || notice.type || '').trim().toLowerCase();
+  const title = String(notice.title || '').trim().toLowerCase();
+  return type === 'conference_submitted' || title === 'new conference room booking';
 }
 
 function notificationHtml(notice) {
