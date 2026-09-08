@@ -388,6 +388,16 @@
       body.personal-calendar-perspective .period-controls .icon-button,
       body.personal-calendar-perspective #notificationsButton{align-items:center!important;aspect-ratio:1/1!important;box-sizing:border-box!important;flex:0 0 var(--personal-calendar-control-size)!important;height:var(--personal-calendar-control-size)!important;justify-content:center!important;max-height:var(--personal-calendar-control-size)!important;max-width:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;min-width:var(--personal-calendar-control-size)!important;border-radius:999px!important;padding:0!important;width:var(--personal-calendar-control-size)!important;}
       body.personal-calendar-perspective #personalCalendarHeaderSearch{box-sizing:border-box!important;height:var(--personal-calendar-control-size)!important;max-height:var(--personal-calendar-control-size)!important;min-height:var(--personal-calendar-control-size)!important;border-radius:999px!important;}
+      @media (max-width: 1040px){
+        body.personal-calendar-perspective .topbar{gap:6px!important;overflow:visible!important;padding-inline:6px!important;}
+        body.personal-calendar-perspective .brand-area{flex:1 1 auto!important;gap:6px!important;min-width:0!important;}
+        body.personal-calendar-perspective .brand-logo{height:36px!important;width:36px!important;}
+        body.personal-calendar-perspective .brand-copy h1{font-size:clamp(1.15rem,3.4vw,1.55rem)!important;line-height:1!important;max-width:100%!important;}
+        body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:38px!important;flex:0 0 auto!important;gap:5px!important;min-width:max-content!important;}
+        body.personal-calendar-perspective .period-controls{gap:5px!important;}
+        body.personal-calendar-perspective #personalCalendarHeaderSearch{flex-basis:38px!important;max-width:38px!important;min-width:38px!important;width:38px!important;}
+        body.personal-calendar-perspective #notificationsButton{margin-right:0!important;}
+      }
       @media (max-width: 420px){
         body.personal-calendar-perspective .calendar-nav{--personal-calendar-control-size:34px!important;}
         body.personal-calendar-perspective #viewSelector{flex-basis:72px!important;min-width:68px!important;max-width:76px!important;font-size:.75rem!important;padding:0 8px!important;text-indent:0!important;}
