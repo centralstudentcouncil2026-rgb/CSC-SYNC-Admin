@@ -605,15 +605,19 @@
       }
 
       #conferenceRoomModal .conference-room-header {
+        --conference-header-side: clamp(248px, 28vw, 420px);
+        align-items: center !important;
         display: grid !important;
-        grid-template-columns: clamp(38px, 4.6vw, 52px) minmax(0, 1fr) auto !important;
-        gap: clamp(6px, 1.4vw, 12px) !important;
-        min-height: var(--header-height) !important;
-        padding: clamp(8px, 1.6vw, 14px) clamp(10px, 2vw, 18px) !important;
+        grid-template-columns: minmax(0, var(--conference-header-side)) minmax(0, 1fr) minmax(0, var(--conference-header-side)) !important;
+        gap: clamp(10px, 1.05vw, 20px) !important;
+        min-height: clamp(58px, 5.7vw, 72px) !important;
+        padding: clamp(8px, 1vw, 10px) clamp(12px, 1vw, 18px) !important;
       }
 
       #conferenceRoomModal .conference-room-header h3 {
-        font-size: clamp(1rem, 2.6vw, 1.35rem) !important;
+        font-size: clamp(1.22rem, 2vw, 2.25rem) !important;
+        grid-column: 2 !important;
+        justify-self: center !important;
         line-height: 1.08 !important;
         min-width: 0 !important;
         overflow: hidden !important;
@@ -626,7 +630,8 @@
         align-items: center !important;
         display: flex !important;
         flex-wrap: nowrap !important;
-        gap: clamp(5px, 1.2vw, 10px) !important;
+        gap: clamp(8px, .8vw, 10px) !important;
+        grid-column: 3 !important;
         justify-content: flex-end !important;
         min-width: 0 !important;
       }
@@ -634,23 +639,64 @@
       #conferenceRoomModal .conference-room-nav-button,
       #conferenceRoomModal .conference-room-notifications,
       #conferenceRoomModal #conferenceRoomBack {
-        flex: 0 0 clamp(36px, 4.8vw, 44px) !important;
-        height: clamp(36px, 4.8vw, 44px) !important;
-        max-width: clamp(36px, 4.8vw, 44px) !important;
-        min-height: clamp(36px, 4.8vw, 44px) !important;
-        min-width: clamp(36px, 4.8vw, 44px) !important;
+        flex: 0 0 clamp(42px, 3.2vw, 64px) !important;
+        height: clamp(42px, 3.2vw, 64px) !important;
+        max-width: clamp(42px, 3.2vw, 64px) !important;
+        min-height: clamp(42px, 3.2vw, 64px) !important;
+        min-width: clamp(42px, 3.2vw, 64px) !important;
         padding: 0 !important;
-        width: clamp(36px, 4.8vw, 44px) !important;
+        width: clamp(42px, 3.2vw, 64px) !important;
+      }
+
+      #conferenceRoomModal #conferenceRoomBack {
+        grid-column: 1 !important;
+        justify-self: start !important;
       }
 
       #conferenceRoomModal .conference-room-body {
-        height: calc(100dvh - var(--header-height)) !important;
+        height: calc(100dvh - clamp(58px, 5.7vw, 72px)) !important;
         padding: clamp(6px, 1.4vw, 12px) !important;
       }
 
       #conferenceRoomCalendar {
-        height: calc(100dvh - var(--header-height) - clamp(12px, 2.4vw, 24px)) !important;
-        max-height: calc(100dvh - var(--header-height) - clamp(12px, 2.4vw, 24px)) !important;
+        height: calc(100dvh - clamp(58px, 5.7vw, 72px) - clamp(12px, 2.4vw, 24px)) !important;
+        max-height: calc(100dvh - clamp(58px, 5.7vw, 72px) - clamp(12px, 2.4vw, 24px)) !important;
+      }
+
+      @media (min-width: 1041px) {
+        #conferenceRoomModal .conference-room-header {
+          --conference-header-side: minmax(300px, 1fr);
+          grid-template-columns: var(--conference-header-side) minmax(360px, auto) var(--conference-header-side) !important;
+        }
+      }
+
+      @media (max-width: 760px) {
+        #conferenceRoomModal .conference-room-header {
+          --conference-header-side: clamp(120px, 34vw, 190px);
+          grid-template-columns: minmax(0, var(--conference-header-side)) minmax(0, 1fr) minmax(0, var(--conference-header-side)) !important;
+          gap: clamp(4px, 1.2vw, 8px) !important;
+          min-height: clamp(54px, 13vw, 62px) !important;
+          padding-inline: clamp(6px, 2vw, 10px) !important;
+        }
+
+        #conferenceRoomModal .conference-room-header h3 {
+          font-size: clamp(.9rem, 4.3vw, 1.12rem) !important;
+        }
+
+        #conferenceRoomModal .conference-room-tools {
+          gap: clamp(4px, 1.1vw, 6px) !important;
+        }
+
+        #conferenceRoomModal .conference-room-nav-button,
+        #conferenceRoomModal .conference-room-notifications,
+        #conferenceRoomModal #conferenceRoomBack {
+          flex-basis: clamp(34px, 9.5vw, 40px) !important;
+          height: clamp(34px, 9.5vw, 40px) !important;
+          max-width: clamp(34px, 9.5vw, 40px) !important;
+          min-height: clamp(34px, 9.5vw, 40px) !important;
+          min-width: clamp(34px, 9.5vw, 40px) !important;
+          width: clamp(34px, 9.5vw, 40px) !important;
+        }
       }
 
       #eventRequestsModal.admin-tab-page .modal-header {
