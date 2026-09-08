@@ -380,9 +380,30 @@
       .inline-actions,
       .admin-tab-actions {
         display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-sm);
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: clamp(4px, 1vw, 10px);
         min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+      }
+
+      .modal-actions button,
+      .modal-actions a,
+      .form-actions button,
+      .form-actions a,
+      .inline-actions button,
+      .inline-actions a,
+      .admin-tab-actions button,
+      .admin-tab-actions a {
+        flex: 1 1 0;
+        font-size: clamp(.68rem, 2.2vw, .92rem);
+        min-height: clamp(40px, 7vw, 44px);
+        min-width: 0;
+        overflow: hidden;
+        padding-inline: clamp(6px, 1.4vw, 16px);
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       table {
@@ -486,15 +507,19 @@
         .form-actions,
         .admin-tab-actions,
         .conference-room-dialog footer {
-          align-items: stretch;
-          flex-direction: column;
+          align-items: center;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          overflow: hidden;
         }
 
         .modal-actions button,
         .form-actions button,
         .admin-tab-actions button,
         .conference-room-dialog footer button {
-          width: 100%;
+          flex: 1 1 0;
+          min-width: 0;
+          width: auto;
         }
 
         #conferenceRoomModal .conference-room-header {
@@ -780,16 +805,30 @@
       }
 
       #eventRequestsModal .er-card-actions {
-        display: grid !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
         gap: clamp(6px, 1vw, 10px) !important;
-        grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)) !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
       }
 
       #eventRequestsModal .er-card-actions button {
+        flex: 1 1 0 !important;
+        font-size: clamp(.66rem, 2.1vw, .9rem) !important;
+        min-height: clamp(40px, 7vw, 44px) !important;
         min-width: 0 !important;
         overflow: hidden !important;
+        padding-inline: clamp(4px, 1.2vw, 14px) !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
+      }
+
+      #eventRequestsModal .er-card-actions .primary-button,
+      #announcementsModal .modal-actions .primary-button,
+      #concernsModal .inline-actions .primary-button,
+      #usersModal .account-card-actions .primary-button {
+        flex-grow: 1.25 !important;
       }
 
       @media (min-width: 761px) and (max-width: 1040px) {
@@ -819,9 +858,7 @@
           grid-template-columns: minmax(104px, .42fr) minmax(0, 1fr) !important;
         }
 
-        #eventRequestsModal .er-card-actions {
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        }
+        #eventRequestsModal .er-card-actions { flex-wrap: nowrap !important; }
       }
 
       @media (max-width: 420px) {

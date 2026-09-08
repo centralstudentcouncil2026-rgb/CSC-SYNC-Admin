@@ -127,9 +127,10 @@
       #announcementsModal .announcement-input-card{display:grid!important;gap:16px!important;}
       #announcementsModal .announcement-input-card label{display:flex!important;flex-direction:column!important;gap:8px!important;}
       #announcementsModal .announcement-input-card input,#announcementsModal .announcement-input-card textarea{border:1px solid #cbd5e1!important;border-radius:14px!important;padding:12px!important;background:#f8fafc!important;}
-      #announcementsModal .modal-actions.split-actions{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;flex-wrap:wrap!important;margin-top:2px!important;padding-top:14px!important;border-top:1px solid #e2e8f0!important;}
-      #announcementsModal .modal-actions.split-actions>div{display:flex!important;gap:10px!important;flex-wrap:wrap!important;}
-      #announcementsModal .modal-actions button{min-height:42px!important;border-radius:999px!important;padding-inline:16px!important;}
+      #announcementsModal .modal-actions.split-actions{display:flex!important;align-items:center!important;flex-direction:row!important;justify-content:space-between!important;gap:clamp(4px,1vw,10px)!important;flex-wrap:nowrap!important;margin-top:2px!important;min-width:0!important;overflow:hidden!important;padding-top:14px!important;border-top:1px solid #e2e8f0!important;}
+      #announcementsModal .modal-actions.split-actions>div{display:flex!important;flex:1 1 0!important;gap:clamp(4px,1vw,10px)!important;flex-wrap:nowrap!important;min-width:0!important;overflow:hidden!important;}
+      #announcementsModal .modal-actions button{border-radius:999px!important;flex:1 1 0!important;font-size:clamp(.68rem,2.2vw,.92rem)!important;line-height:1.05!important;min-height:42px!important;min-width:0!important;overflow:hidden!important;padding-inline:clamp(6px,1.4vw,16px)!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
+      #announcementsModal .modal-actions .primary-button{flex-grow:1.35!important;}
 
       #usersModal #usersList{display:flex!important;flex-direction:column!important;gap:14px!important;overflow-y:auto!important;overflow-x:hidden!important;}
       #usersModal #usersList>.activity-item,#usersModal #accountRequestsList>.activity-item{width:100%!important;max-width:none!important;min-height:unset!important;height:auto!important;max-height:none!important;overflow:visible!important;white-space:normal!important;overflow-wrap:anywhere!important;}

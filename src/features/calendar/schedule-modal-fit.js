@@ -71,7 +71,7 @@
       body.admin-dashboard-shell #detailsModal[open] .modal-header,
       body.admin-dashboard-shell #eventReviewModal[open] .modal-header,
       body.admin-dashboard-shell #conflictModal[open] .modal-header,
-      body.admin-dashboard-shell #agreementModal[open] .modal-header,
+      body.admin-dashboard-shell #agreementModal[open] .modal-header {
         border-radius: 0 !important;
         box-sizing: border-box !important;
         flex: 0 0 auto !important;
@@ -83,7 +83,7 @@
       body.admin-dashboard-shell #detailsModal[open] .details-list,
       body.admin-dashboard-shell #eventReviewModal[open] .form-grid,
       body.admin-dashboard-shell #conflictModal[open] .conflict-body,
-      body.admin-dashboard-shell #agreementModal[open] .agreement-body,
+      body.admin-dashboard-shell #agreementModal[open] .agreement-body {
         background: transparent !important;
         border: 0 !important;
         box-shadow: none !important;
@@ -96,7 +96,7 @@
         padding: clamp(12px, 2vw, 18px) clamp(14px, 2.2vw, 22px) !important;
       }
 
-      body.admin-dashboard-shell #detailsModal[open] .details-list,
+      body.admin-dashboard-shell #detailsModal[open] .details-list {
         display: grid !important;
         gap: clamp(8px, 1.2vw, 12px) !important;
         grid-template-columns: minmax(0, 1fr) !important;
@@ -107,7 +107,7 @@
       body.admin-dashboard-shell #eventReviewModal[open] .modal-actions,
       body.admin-dashboard-shell #conflictModal[open] .modal-actions,
       body.admin-dashboard-shell #agreementModal[open] .modal-actions,
-      body.admin-dashboard-shell #statusCallUnavailableModal[open] .modal-actions,
+      body.admin-dashboard-shell #statusCallUnavailableModal[open] .modal-actions {
         align-items: center !important;
         border-top: 1px solid #e2e8f0 !important;
         box-sizing: border-box !important;
@@ -123,13 +123,13 @@
         padding: clamp(9px, 1.6vw, 16px) clamp(10px, 2vw, 22px) !important;
       }
 
-      body.admin-dashboard-shell #eventModal[open] .split-actions,
+      body.admin-dashboard-shell #eventModal[open] .split-actions {
         justify-content: space-between !important;
       }
 
-      body.admin-dashboard-shell #eventModal[open] .split-actions > div,
+      body.admin-dashboard-shell #eventModal[open] .split-actions > div {
         display: flex !important;
-        flex: 1 1 auto !important;
+        flex: 1 1 0 !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: clamp(4px, 0.85vw, 10px) !important;
@@ -142,12 +142,12 @@
       body.admin-dashboard-shell #eventReviewModal[open] .modal-actions button,
       body.admin-dashboard-shell #conflictModal[open] .modal-actions button,
       body.admin-dashboard-shell #agreementModal[open] .modal-actions button,
-      body.admin-dashboard-shell #statusCallUnavailableModal[open] .modal-actions button,
+      body.admin-dashboard-shell #statusCallUnavailableModal[open] .modal-actions button {
         flex: 1 1 0 !important;
         font-size: clamp(9px, 1.6vw, 13px) !important;
         line-height: 1.1 !important;
         max-width: 180px !important;
-        min-height: clamp(31px, 5vw, 40px) !important;
+        min-height: clamp(40px, 6vw, 44px) !important;
         min-width: 0 !important;
         overflow: hidden !important;
         padding: 0 clamp(4px, 1.1vw, 12px) !important;
@@ -155,14 +155,15 @@
         white-space: nowrap !important;
       }
 
-      body.admin-dashboard-shell #detailsModal[open] .modal-actions button,
+      body.admin-dashboard-shell #detailsModal[open] .modal-actions button {
         max-width: none !important;
       }
 
-      body.admin-dashboard-shell #eventModal[open] .modal-actions > button,
+      body.admin-dashboard-shell #eventModal[open] .modal-actions > button {
         flex: 0.85 1 0 !important;
       }
 
+      body.admin-dashboard-shell .status-call-button {
         align-items: center !important;
         background: var(--aup-blue, #2563eb) !important;
         border: 1px solid var(--aup-blue, #2563eb) !important;
@@ -179,11 +180,13 @@
         text-decoration: none !important;
       }
 
+      body.admin-dashboard-shell .status-call-button.is-call-available {
         background: var(--aup-blue, #2563eb) !important;
         border-color: var(--aup-blue, #2563eb) !important;
         color: #ffffff !important;
       }
 
+      body.admin-dashboard-shell .status-call-button.is-call-unavailable {
         opacity: 0.92 !important;
       }
 
@@ -281,24 +284,30 @@
 
       body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions > div {
         display: flex !important;
-        flex: 0 1 auto !important;
-        gap: 12px !important;
+        flex: 1 1 0 !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(4px, 1vw, 10px) !important;
         min-width: 0 !important;
+        overflow: hidden !important;
       }
 
       body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions button {
-        flex: 0 0 auto !important;
-        font-size: clamp(0.88rem, 1.45vw, 1rem) !important;
+        flex: 1 1 0 !important;
+        font-size: clamp(0.68rem, 2.2vw, 1rem) !important;
         line-height: 1.1 !important;
-        min-height: 48px !important;
-        min-width: 150px !important;
-        padding: 0 24px !important;
+        min-height: clamp(40px, 7vw, 44px) !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        padding: 0 clamp(6px, 1.4vw, 18px) !important;
+        text-overflow: ellipsis !important;
         white-space: nowrap !important;
       }
 
       body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions > .primary-button {
+        flex-grow: 1.25 !important;
         margin-left: auto !important;
-        min-width: 178px !important;
+        min-width: 0 !important;
       }
 
       @media (max-width: 720px) {
@@ -320,16 +329,16 @@
         }
 
         body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions {
-          flex-wrap: wrap !important;
+          flex-wrap: nowrap !important;
         }
 
         body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions > div {
-          flex: 1 1 100% !important;
+          flex: 1 1 0 !important;
         }
 
         body.admin-dashboard-shell #eventModal[open] #eventForm > .modal-actions button {
           flex: 1 1 0 !important;
-          min-width: min(100%, 130px) !important;
+          min-width: 0 !important;
         }
       }
     `;

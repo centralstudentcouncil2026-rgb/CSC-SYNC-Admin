@@ -11106,6 +11106,58 @@ await import(moduleUrls[moduleOrder.at(-1)]);
     }
   }
 </style>
+<style id="csc-action-row-phase2-style">
+  #eventRequestsModal .er-card-actions,
+  #concernsModal .inline-actions,
+  #announcementsModal .modal-actions,
+  #announcementsModal .modal-actions.split-actions,
+  #announcementsModal .modal-actions.split-actions > div,
+  #usersModal .account-card-actions,
+  #detailsModal .modal-actions,
+  #eventModal .modal-actions,
+  #eventModal .modal-actions > div,
+  #eventReviewModal .modal-actions {
+    align-items: center !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(4px, 1vw, 10px) !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  #eventRequestsModal .er-card-actions button,
+  #concernsModal .inline-actions button,
+  #announcementsModal .modal-actions button,
+  #usersModal .account-card-actions button,
+  #detailsModal .modal-actions button,
+  #eventModal .modal-actions button,
+  #eventReviewModal .modal-actions button {
+    flex: 1 1 0 !important;
+    font-size: clamp(.66rem, 2.2vw, .92rem) !important;
+    line-height: 1.08 !important;
+    margin: 0 !important;
+    min-height: clamp(40px, 7vw, 44px) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding: 0 clamp(4px, 1.4vw, 16px) !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    width: auto !important;
+  }
+  #eventRequestsModal .er-card-actions .primary-button,
+  #concernsModal .inline-actions .primary-button,
+  #announcementsModal .modal-actions .primary-button,
+  #usersModal .account-card-actions .primary-button,
+  #detailsModal .modal-actions .primary-button,
+  #eventModal .modal-actions .primary-button,
+  #eventReviewModal .modal-actions .primary-button {
+    flex-grow: 1.25 !important;
+  }
+  #announcementsModal .modal-actions .primary-button {
+    flex-grow: 1.45 !important;
+  }
+</style>
 </body>
   
 </html>
