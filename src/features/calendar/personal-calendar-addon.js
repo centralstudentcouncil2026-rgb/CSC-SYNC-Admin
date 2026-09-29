@@ -154,7 +154,7 @@
       body.admin-dashboard-shell .personal-calendar-section #personalCalendarButton{align-items:center!important;border-radius:18px!important;box-sizing:border-box!important;display:flex!important;font-size:clamp(13px,3.6vw,16px)!important;font-weight:800!important;justify-content:center!important;line-height:1.18!important;margin:0!important;min-height:48px!important;min-width:0!important;overflow:hidden!important;padding:10px 12px!important;text-align:center!important;text-overflow:ellipsis!important;white-space:nowrap!important;width:100%!important;}
       body.admin-dashboard-shell .personal-calendar-section .section-label{align-items:center!important;background:transparent!important;border:0!important;color:#334155!important;display:flex!important;font-size:clamp(11px,2.8vw,13px)!important;font-weight:900!important;letter-spacing:0!important;line-height:1.16!important;margin:0!important;min-height:0!important;overflow:hidden!important;padding:0!important;text-overflow:ellipsis!important;text-transform:uppercase!important;white-space:nowrap!important;}
       @media (max-width:760px){body.admin-dashboard-shell .personal-calendar-section{border-radius:13px!important;gap:10px!important;padding:12px!important;}body.admin-dashboard-shell .personal-calendar-section #personalCalendarButton{border-radius:16px!important;min-height:44px!important;padding:9px 10px!important;}}
-      #personalCalendarBackButton{display:none;}
+      #personalCalendarBackButton{display:none!important;}
       #personalCalendarHost{display:none!important;}
       body.personal-calendar-perspective #calendar{display:none!important;}
       body.personal-calendar-perspective #personalCalendarHost{display:block!important;}
@@ -221,8 +221,7 @@
       body.personal-calendar-perspective #mobileMenuButton{align-items:center!important;aspect-ratio:1/1!important;border-radius:999px!important;display:inline-flex!important;flex:0 0 auto!important;height:44px!important;justify-content:center!important;min-height:44px!important;min-width:44px!important;padding:0!important;width:44px!important;}
       body.personal-calendar-perspective #mobileMenuButton span{display:none!important;}
       body.personal-calendar-perspective #mobileMenuButton::before{content:'\\2190'!important;font-size:1.3rem!important;font-weight:800!important;line-height:1!important;}
-      body.personal-calendar-perspective #personalCalendarBackButton{align-items:center!important;background:rgba(255,255,255,.96)!important;border:1px solid rgba(15,23,42,.12)!important;border-radius:999px!important;box-shadow:0 10px 24px rgba(15,23,42,.12)!important;color:#0f172a!important;display:inline-flex!important;flex:0 0 auto!important;font-weight:900!important;gap:6px!important;height:44px!important;justify-content:center!important;line-height:1!important;min-height:44px!important;min-width:92px!important;padding:0 16px!important;white-space:nowrap!important;}
-      body.personal-calendar-perspective #personalCalendarBackButton::before{content:'\\2190';font-size:1.05rem;font-weight:900;line-height:1;}
+      body.personal-calendar-perspective #personalCalendarBackButton{display:none!important;}
       body.personal-calendar-perspective .sidebar .sidebar-section{display:none!important;}
       body.personal-calendar-perspective .sidebar .admin-action-panel,
       body.personal-calendar-perspective .sidebar .status-card{display:grid!important;}
@@ -241,19 +240,18 @@
       body.personal-calendar-perspective .brand-copy p{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
       body.personal-calendar-perspective .calendar-nav{align-items:center!important;display:flex!important;flex:1 1 auto!important;flex-wrap:nowrap!important;gap:10px!important;justify-content:flex-end!important;min-width:0!important;position:relative!important;}
       body.personal-calendar-perspective #personalCalendarHeaderSearch{flex:1 1 220px!important;max-width:360px!important;min-width:96px!important;transition:max-width .18s ease,width .18s ease,flex-basis .18s ease,box-shadow .18s ease!important;}
-      body.personal-calendar-perspective #personalCalendarHeaderSearch{align-items:center!important;justify-content:flex-start!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
-      #personalCalendarAccountModal{border:0;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);max-width:min(560px,calc(100vw - 28px));padding:0;width:560px;}
-      #personalCalendarAccountModal::backdrop{background:rgba(15,23,42,.48);}
-      .personal-account-picker{background:#fff;border-radius:18px;display:grid;max-height:min(680px,calc(100dvh - 28px));overflow:hidden;}
-      .personal-account-picker__header{align-items:center;border-bottom:1px solid #e2e8f0;display:flex;gap:12px;justify-content:space-between;padding:18px 20px;}
-      .personal-account-picker__header h3{color:#0f172a;font-size:1.15rem;line-height:1.1;margin:0;}
-      .personal-account-picker__close{align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:999px;color:#0f172a;display:inline-flex;font-size:1.1rem;font-weight:900;height:40px;justify-content:center;width:40px;}
-      .personal-account-picker__body{display:grid;gap:12px;min-height:0;padding:16px 20px 20px;}
-      #personalAccountPickerFilter{border:1px solid #cbd5e1;border-radius:999px;box-sizing:border-box;font:inherit;min-height:44px;padding:0 16px;width:100%;}
-      .personal-account-picker__list{display:grid;gap:8px;max-height:min(430px,52dvh);overflow:auto;padding-right:2px;}
-      .personal-account-picker__item{align-items:flex-start;background:#f8fafc;border:1px solid #dbe4ef;border-radius:12px;color:#0f172a;display:grid;gap:3px;padding:12px 14px;text-align:left;width:100%;}
-      .personal-account-picker__item strong{font-size:.96rem;line-height:1.2;}
-      .personal-account-picker__item span{color:#64748b;font-size:.82rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      body.personal-calendar-perspective #personalCalendarHeaderSearch{align-items:center!important;justify-content:flex-start!important;overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important;}
+      body.personal-calendar-perspective #personalCalendarHeaderSearch .personal-account-picker-label{display:block!important;line-height:1.05!important;max-width:100%!important;min-width:0!important;overflow:hidden!important;text-overflow:clip!important;white-space:nowrap!important;}
+      #personalCalendarAccountModal{background:#fff;border:1px solid rgba(148,163,184,.42);border-radius:14px;box-shadow:0 18px 42px rgba(15,23,42,.2);box-sizing:border-box;display:none;max-height:min(460px,calc(100dvh - 120px));overflow:hidden;padding:10px;position:absolute;right:0;top:calc(100% + 8px);width:min(440px,calc(100vw - 24px));z-index:60;}
+      #personalCalendarAccountModal[open]{display:block;}
+      .personal-account-picker{background:#fff;border-radius:12px;display:grid;gap:10px;max-height:100%;overflow:hidden;}
+      .personal-account-picker__header{display:none;}
+      .personal-account-picker__body{display:grid;gap:10px;min-height:0;}
+      #personalAccountPickerFilter{border:1px solid #cbd5e1;border-radius:999px;box-sizing:border-box;font:inherit;min-height:40px;padding:0 14px;width:100%;}
+      .personal-account-picker__list{display:grid;gap:8px;max-height:min(360px,42dvh);overflow:auto;padding-right:2px;}
+      .personal-account-picker__item{align-items:flex-start;background:#f8fafc;border:1px solid #dbe4ef;border-radius:10px;color:#0f172a;display:grid;gap:3px;min-width:0;padding:10px 12px;text-align:left;width:100%;}
+      .personal-account-picker__item strong{font-size:clamp(.78rem,1.8vw,.96rem);line-height:1.15;overflow-wrap:anywhere;}
+      .personal-account-picker__item span{color:#64748b;font-size:clamp(.68rem,1.55vw,.82rem);line-height:1.15;overflow-wrap:anywhere;white-space:normal;}
       .personal-account-picker__item[aria-selected="true"]{background:#eff6ff;border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.16);}
       .personal-account-picker__empty{border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;margin:0;padding:18px;text-align:center;}
       body.personal-calendar-perspective #viewSelector{flex:0 0 128px!important;min-width:104px!important;}
@@ -300,8 +298,6 @@
       }
       @media (max-width: 390px){
         body.personal-calendar-perspective .calendar-nav{gap:4px!important;}
-        body.personal-calendar-perspective #personalCalendarBackButton{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}
-        body.personal-calendar-perspective #personalCalendarBackButton span{display:none!important;}
         body.personal-calendar-perspective #personalCalendarHeaderSearch{font-size:.76rem!important;min-height:36px!important;min-width:0!important;padding-left:8px!important;padding-right:18px!important;width:auto!important;}
         body.personal-calendar-perspective #personalCalendarHeaderSearch::placeholder{font-size:.76rem!important;}
         body.personal-calendar-perspective #viewSelector{flex-basis:76px!important;font-size:.76rem!important;max-width:76px!important;min-height:36px!important;min-width:70px!important;padding-left:8px!important;padding-right:18px!important;}
@@ -600,7 +596,7 @@
     search.id = 'personalCalendarHeaderSearch';
     search.className = 'view-selector personal-calendar-header-search';
     search.type = 'button';
-    search.setAttribute('aria-haspopup', 'dialog');
+    search.setAttribute('aria-haspopup', 'listbox');
     search.setAttribute('aria-controls', 'personalCalendarAccountModal');
     search.setAttribute('aria-label', 'Choose account calendar');
     const organizationFilter = document.getElementById('headerOrganizationFilter');
@@ -608,22 +604,6 @@
     else document.querySelector('.calendar-nav')?.prepend(search);
     updateAccountPickerLabel(search);
     return search;
-  }
-
-  function ensurePersonalBackButton() {
-    let button = document.getElementById('personalCalendarBackButton');
-    if (button) return button;
-    button = document.createElement('button');
-    button.id = 'personalCalendarBackButton';
-    button.className = 'secondary-button personal-calendar-back-button';
-    button.type = 'button';
-    button.innerHTML = '<span>Back</span>';
-    button.setAttribute('aria-label', 'Back to main dashboard calendar');
-    button.setAttribute('title', 'Back to main dashboard calendar');
-    const search = document.getElementById('personalCalendarHeaderSearch');
-    if (search) search.insertAdjacentElement('beforebegin', button);
-    else document.querySelector('.calendar-nav')?.prepend(button);
-    return button;
   }
 
   function compactHeaderSearchEnabled() {
@@ -701,28 +681,39 @@
   function updateAccountPickerLabel(button = document.getElementById('personalCalendarHeaderSearch')) {
     if (!button) return;
     const label = accountLabel(profileForAccountId());
-    button.textContent = label || ACCOUNT_PICKER_DEFAULT_LABEL;
+    button.innerHTML = `<span class="personal-account-picker-label">${escapeHtml(label || ACCOUNT_PICKER_DEFAULT_LABEL)}</span>`;
     button.title = `Showing ${label || ACCOUNT_PICKER_DEFAULT_LABEL}`;
+    fitAccountPickerLabel(button);
+  }
+
+  function fitAccountPickerLabel(button = document.getElementById('personalCalendarHeaderSearch')) {
+    const label = button?.querySelector?.('.personal-account-picker-label');
+    if (!button || !label) return;
+    label.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(label).fontSize) || 16;
+    while (label.scrollWidth > Math.max(0, button.clientWidth - 12) && size > 10) {
+      size -= 0.5;
+      label.style.fontSize = `${size}px`;
+    }
   }
 
   function ensureAccountPickerModal() {
     let modal = document.getElementById('personalCalendarAccountModal');
     if (modal) return modal;
-    modal = document.createElement('dialog');
+    modal = document.createElement('div');
     modal.id = 'personalCalendarAccountModal';
+    modal.setAttribute('role', 'presentation');
     modal.innerHTML = `
-      <section class="personal-account-picker" aria-labelledby="personalAccountPickerTitle">
-        <header class="personal-account-picker__header">
-          <h3 id="personalAccountPickerTitle">Choose Account Calendar</h3>
-          <button class="personal-account-picker__close" type="button" data-account-picker-close aria-label="Close">&times;</button>
-        </header>
+      <section class="personal-account-picker" aria-label="Choose Account Calendar">
         <div class="personal-account-picker__body">
           <input id="personalAccountPickerFilter" type="search" autocomplete="off" placeholder="Filter accounts" aria-label="Filter accounts">
           <div id="personalAccountPickerList" class="personal-account-picker__list" role="listbox"></div>
         </div>
       </section>
     `;
-    document.body.appendChild(modal);
+    const search = document.getElementById('personalCalendarHeaderSearch');
+    if (search?.parentElement) search.insertAdjacentElement('afterend', modal);
+    else document.body.appendChild(modal);
     return modal;
   }
 
@@ -793,8 +784,8 @@
     const filter = modal.querySelector('#personalAccountPickerFilter');
     if (filter) filter.value = '';
     renderAccountPickerList();
-    if (typeof modal.showModal === 'function' && !modal.open) modal.showModal();
-    else modal.setAttribute('open', '');
+    modal.setAttribute('open', '');
+    document.getElementById('personalCalendarHeaderSearch')?.setAttribute('aria-expanded', 'true');
     await loadAccountProfiles({ force: !accountProfilesCache.length }).catch((error) => {
       console.warn('Account picker failed:', error);
     });
@@ -805,8 +796,8 @@
   function closeAccountPicker() {
     const modal = document.getElementById('personalCalendarAccountModal');
     if (!modal) return;
-    if (typeof modal.close === 'function') modal.close();
-    else modal.removeAttribute('open');
+    modal.removeAttribute('open');
+    document.getElementById('personalCalendarHeaderSearch')?.setAttribute('aria-expanded', 'false');
   }
 
   async function selectPersonalAccount(id) {
@@ -866,7 +857,6 @@
   function refreshAddonDom() {
     ensureRecurrenceControls();
     ensureHeaderSearch();
-    ensurePersonalBackButton();
     if (personalMode) ensurePersonalViewOptions();
     ensureClassCategory();
     ensureTab();
@@ -1059,7 +1049,6 @@
 
   function enterPersonalPerspective() {
     ensureHeaderSearch();
-    ensurePersonalBackButton();
     if (personalMode) return;
     const menu = document.getElementById('mobileMenuButton');
     const view = document.getElementById('viewSelector');
@@ -2429,7 +2418,7 @@
     });
     document.addEventListener('click', (event) => {
       if (!personalMode) return;
-      if (event.target?.id === 'personalCalendarHeaderSearch') {
+      if (event.target.closest?.('#personalCalendarHeaderSearch')) {
         event.preventDefault();
         event.stopPropagation();
         expandHeaderSearch();
@@ -2445,6 +2434,11 @@
       if (accountButton) {
         event.preventDefault();
         void selectPersonalAccount(accountButton.dataset.personalAccountId);
+        return;
+      }
+      const picker = document.getElementById('personalCalendarAccountModal');
+      if (picker?.hasAttribute('open') && !event.target.closest?.('#personalCalendarAccountModal')) {
+        closeAccountPicker();
       }
     }, true);
     document.addEventListener('focusout', (event) => {
