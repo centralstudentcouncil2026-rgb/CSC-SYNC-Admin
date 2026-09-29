@@ -6,14 +6,16 @@
   const TABLE = 'personal_calendar_items';
   const PERSONAL_RECORD_TYPE = 'personal_schedule';
   const CLASS_CATEGORY = { id: 'class', name: 'Class', color: '#2563eb', active: true };
-  const HEADER_SEARCH_FULL_PLACEHOLDER = 'Search public calendars by full name or title';
-  const HEADER_SEARCH_COMPACT_PLACEHOLDER = 'Search';
+  const ACCOUNT_PICKER_DEFAULT_LABEL = 'Select account';
   const RECURRENCE_TYPES = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
   const PERSONAL_EVENTS_CACHE_TTL = 60000;
   let events = [];
   let filteredEvents = [];
   let cachedPersonalRows = [];
   let activeQuery = '';
+  let activeAccountId = '';
+  let accountProfilesCache = [];
+  let accountProfilesLoadedAt = 0;
   let personalMode = false;
   let savedDashboardUi = null;
   let savedMainEvents = null;
@@ -152,6 +154,7 @@
       body.admin-dashboard-shell .personal-calendar-section #personalCalendarButton{align-items:center!important;border-radius:18px!important;box-sizing:border-box!important;display:flex!important;font-size:clamp(13px,3.6vw,16px)!important;font-weight:800!important;justify-content:center!important;line-height:1.18!important;margin:0!important;min-height:48px!important;min-width:0!important;overflow:hidden!important;padding:10px 12px!important;text-align:center!important;text-overflow:ellipsis!important;white-space:nowrap!important;width:100%!important;}
       body.admin-dashboard-shell .personal-calendar-section .section-label{align-items:center!important;background:transparent!important;border:0!important;color:#334155!important;display:flex!important;font-size:clamp(11px,2.8vw,13px)!important;font-weight:900!important;letter-spacing:0!important;line-height:1.16!important;margin:0!important;min-height:0!important;overflow:hidden!important;padding:0!important;text-overflow:ellipsis!important;text-transform:uppercase!important;white-space:nowrap!important;}
       @media (max-width:760px){body.admin-dashboard-shell .personal-calendar-section{border-radius:13px!important;gap:10px!important;padding:12px!important;}body.admin-dashboard-shell .personal-calendar-section #personalCalendarButton{border-radius:16px!important;min-height:44px!important;padding:9px 10px!important;}}
+      #personalCalendarBackButton{display:none;}
       #personalCalendarHost{display:none!important;}
       body.personal-calendar-perspective #calendar{display:none!important;}
       body.personal-calendar-perspective #personalCalendarHost{display:block!important;}
@@ -218,6 +221,8 @@
       body.personal-calendar-perspective #mobileMenuButton{align-items:center!important;aspect-ratio:1/1!important;border-radius:999px!important;display:inline-flex!important;flex:0 0 auto!important;height:44px!important;justify-content:center!important;min-height:44px!important;min-width:44px!important;padding:0!important;width:44px!important;}
       body.personal-calendar-perspective #mobileMenuButton span{display:none!important;}
       body.personal-calendar-perspective #mobileMenuButton::before{content:'\\2190'!important;font-size:1.3rem!important;font-weight:800!important;line-height:1!important;}
+      body.personal-calendar-perspective #personalCalendarBackButton{align-items:center!important;background:rgba(255,255,255,.96)!important;border:1px solid rgba(15,23,42,.12)!important;border-radius:999px!important;box-shadow:0 10px 24px rgba(15,23,42,.12)!important;color:#0f172a!important;display:inline-flex!important;flex:0 0 auto!important;font-weight:900!important;gap:6px!important;height:44px!important;justify-content:center!important;line-height:1!important;min-height:44px!important;min-width:92px!important;padding:0 16px!important;white-space:nowrap!important;}
+      body.personal-calendar-perspective #personalCalendarBackButton::before{content:'\\2190';font-size:1.05rem;font-weight:900;line-height:1;}
       body.personal-calendar-perspective .sidebar .sidebar-section{display:none!important;}
       body.personal-calendar-perspective .sidebar .admin-action-panel,
       body.personal-calendar-perspective .sidebar .status-card{display:grid!important;}
@@ -236,6 +241,21 @@
       body.personal-calendar-perspective .brand-copy p{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
       body.personal-calendar-perspective .calendar-nav{align-items:center!important;display:flex!important;flex:1 1 auto!important;flex-wrap:nowrap!important;gap:10px!important;justify-content:flex-end!important;min-width:0!important;position:relative!important;}
       body.personal-calendar-perspective #personalCalendarHeaderSearch{flex:1 1 220px!important;max-width:360px!important;min-width:96px!important;transition:max-width .18s ease,width .18s ease,flex-basis .18s ease,box-shadow .18s ease!important;}
+      body.personal-calendar-perspective #personalCalendarHeaderSearch{align-items:center!important;justify-content:flex-start!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
+      #personalCalendarAccountModal{border:0;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);max-width:min(560px,calc(100vw - 28px));padding:0;width:560px;}
+      #personalCalendarAccountModal::backdrop{background:rgba(15,23,42,.48);}
+      .personal-account-picker{background:#fff;border-radius:18px;display:grid;max-height:min(680px,calc(100dvh - 28px));overflow:hidden;}
+      .personal-account-picker__header{align-items:center;border-bottom:1px solid #e2e8f0;display:flex;gap:12px;justify-content:space-between;padding:18px 20px;}
+      .personal-account-picker__header h3{color:#0f172a;font-size:1.15rem;line-height:1.1;margin:0;}
+      .personal-account-picker__close{align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:999px;color:#0f172a;display:inline-flex;font-size:1.1rem;font-weight:900;height:40px;justify-content:center;width:40px;}
+      .personal-account-picker__body{display:grid;gap:12px;min-height:0;padding:16px 20px 20px;}
+      #personalAccountPickerFilter{border:1px solid #cbd5e1;border-radius:999px;box-sizing:border-box;font:inherit;min-height:44px;padding:0 16px;width:100%;}
+      .personal-account-picker__list{display:grid;gap:8px;max-height:min(430px,52dvh);overflow:auto;padding-right:2px;}
+      .personal-account-picker__item{align-items:flex-start;background:#f8fafc;border:1px solid #dbe4ef;border-radius:12px;color:#0f172a;display:grid;gap:3px;padding:12px 14px;text-align:left;width:100%;}
+      .personal-account-picker__item strong{font-size:.96rem;line-height:1.2;}
+      .personal-account-picker__item span{color:#64748b;font-size:.82rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .personal-account-picker__item[aria-selected="true"]{background:#eff6ff;border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.16);}
+      .personal-account-picker__empty{border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;margin:0;padding:18px;text-align:center;}
       body.personal-calendar-perspective #viewSelector{flex:0 0 128px!important;min-width:104px!important;}
       body.personal-calendar-perspective .period-controls{display:inline-flex!important;flex:0 0 auto!important;gap:8px!important;}
       body.personal-calendar-perspective .period-controls .icon-button,
@@ -280,6 +300,8 @@
       }
       @media (max-width: 390px){
         body.personal-calendar-perspective .calendar-nav{gap:4px!important;}
+        body.personal-calendar-perspective #personalCalendarBackButton{height:36px!important;min-height:36px!important;min-width:36px!important;padding:0!important;width:36px!important;}
+        body.personal-calendar-perspective #personalCalendarBackButton span{display:none!important;}
         body.personal-calendar-perspective #personalCalendarHeaderSearch{font-size:.76rem!important;min-height:36px!important;min-width:0!important;padding-left:8px!important;padding-right:18px!important;width:auto!important;}
         body.personal-calendar-perspective #personalCalendarHeaderSearch::placeholder{font-size:.76rem!important;}
         body.personal-calendar-perspective #viewSelector{flex-basis:76px!important;font-size:.76rem!important;max-width:76px!important;min-height:36px!important;min-width:70px!important;padding-left:8px!important;padding-right:18px!important;}
@@ -515,6 +537,8 @@
       firstDay: 0,
       height: '100%',
       expandRows: true,
+      fixedWeekCount: false,
+      showNonCurrentDates: false,
       nowIndicator: true,
       selectable: true,
       editable: true,
@@ -563,19 +587,43 @@
 
   function ensureHeaderSearch() {
     let search = document.getElementById('personalCalendarHeaderSearch');
-    if (search) return search;
-    search = document.createElement('input');
+    if (search && search.tagName !== 'BUTTON') {
+      const replacement = document.createElement('button');
+      search.replaceWith(replacement);
+      search = replacement;
+    }
+    if (search) {
+      updateAccountPickerLabel(search);
+      return search;
+    }
+    search = document.createElement('button');
     search.id = 'personalCalendarHeaderSearch';
     search.className = 'view-selector personal-calendar-header-search';
-    search.type = 'search';
-    search.autocomplete = 'off';
-    search.placeholder = HEADER_SEARCH_FULL_PLACEHOLDER;
-    search.setAttribute('aria-label', 'Search public personal calendars');
+    search.type = 'button';
+    search.setAttribute('aria-haspopup', 'dialog');
+    search.setAttribute('aria-controls', 'personalCalendarAccountModal');
+    search.setAttribute('aria-label', 'Choose account calendar');
     const organizationFilter = document.getElementById('headerOrganizationFilter');
     if (organizationFilter) organizationFilter.insertAdjacentElement('afterend', search);
     else document.querySelector('.calendar-nav')?.prepend(search);
-    syncHeaderSearchMode(search);
+    updateAccountPickerLabel(search);
     return search;
+  }
+
+  function ensurePersonalBackButton() {
+    let button = document.getElementById('personalCalendarBackButton');
+    if (button) return button;
+    button = document.createElement('button');
+    button.id = 'personalCalendarBackButton';
+    button.className = 'secondary-button personal-calendar-back-button';
+    button.type = 'button';
+    button.innerHTML = '<span>Back</span>';
+    button.setAttribute('aria-label', 'Back to main dashboard calendar');
+    button.setAttribute('title', 'Back to main dashboard calendar');
+    const search = document.getElementById('personalCalendarHeaderSearch');
+    if (search) search.insertAdjacentElement('beforebegin', button);
+    else document.querySelector('.calendar-nav')?.prepend(button);
+    return button;
   }
 
   function compactHeaderSearchEnabled() {
@@ -586,7 +634,6 @@
     if (!search) return;
     const compact = compactHeaderSearchEnabled();
     const expanded = document.body.classList.contains('personal-search-expanded') || document.activeElement === search;
-    search.placeholder = compact && !expanded ? HEADER_SEARCH_COMPACT_PLACEHOLDER : HEADER_SEARCH_FULL_PLACEHOLDER;
     search.setAttribute('aria-expanded', String(compact && expanded));
     if (!compact) document.body.classList.remove('personal-search-expanded');
   }
@@ -595,11 +642,9 @@
     const search = document.getElementById('personalCalendarHeaderSearch');
     if (!search || !compactHeaderSearchEnabled()) return;
     document.body.classList.add('personal-search-expanded');
-    search.placeholder = HEADER_SEARCH_FULL_PLACEHOLDER;
     search.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(() => {
       schedulePersonalCalendarHeightSync();
-      search.focus({ preventScroll: true });
     });
   }
 
@@ -611,13 +656,178 @@
     schedulePersonalCalendarHeightSync();
   }
 
+  function selectedPersonalAccountId() {
+    return activeAccountId || currentUserId();
+  }
+
+  function accountLabel(profile = {}) {
+    return [
+      profile.full_name,
+      profile.username,
+      profile.organization_name,
+      profile.organizationName,
+      profile.email,
+      profile.aup_email,
+      profile.id
+    ].map((value) => String(value || '').trim()).find(Boolean) || 'Calendar User';
+  }
+
+  function accountMeta(profile = {}) {
+    return [
+      profile.email || profile.aup_email,
+      profile.account_type,
+      profile.role
+    ].map((value) => String(value || '').trim()).filter(Boolean).join(' - ');
+  }
+
+  function accountSearchText(profile = {}) {
+    return profileSearchValues(profile).map(normalizedSearchTerm).filter(Boolean).join(' ');
+  }
+
+  function profileForAccountId(id = selectedPersonalAccountId()) {
+    const store = dashboardStore();
+    const target = String(id || '');
+    const sessionEmail = String(session()?.user?.email || '').toLowerCase();
+    const local = [
+      ...(Array.isArray(store?.users) ? store.users : []),
+      ...accountProfilesCache,
+      user()
+    ];
+    return local.find((profile) => target && String(profile?.id || '') === target)
+      || local.find((profile) => sessionEmail && String(profile?.email || profile?.aup_email || '').toLowerCase() === sessionEmail)
+      || {};
+  }
+
+  function updateAccountPickerLabel(button = document.getElementById('personalCalendarHeaderSearch')) {
+    if (!button) return;
+    const label = accountLabel(profileForAccountId());
+    button.textContent = label || ACCOUNT_PICKER_DEFAULT_LABEL;
+    button.title = `Showing ${label || ACCOUNT_PICKER_DEFAULT_LABEL}`;
+  }
+
+  function ensureAccountPickerModal() {
+    let modal = document.getElementById('personalCalendarAccountModal');
+    if (modal) return modal;
+    modal = document.createElement('dialog');
+    modal.id = 'personalCalendarAccountModal';
+    modal.innerHTML = `
+      <section class="personal-account-picker" aria-labelledby="personalAccountPickerTitle">
+        <header class="personal-account-picker__header">
+          <h3 id="personalAccountPickerTitle">Choose Account Calendar</h3>
+          <button class="personal-account-picker__close" type="button" data-account-picker-close aria-label="Close">&times;</button>
+        </header>
+        <div class="personal-account-picker__body">
+          <input id="personalAccountPickerFilter" type="search" autocomplete="off" placeholder="Filter accounts" aria-label="Filter accounts">
+          <div id="personalAccountPickerList" class="personal-account-picker__list" role="listbox"></div>
+        </div>
+      </section>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function localAccountProfiles() {
+    const store = dashboardStore();
+    const current = user();
+    const byId = new Map();
+    [...(Array.isArray(store?.users) ? store.users : []), current].forEach((profile) => {
+      if (profile?.id) byId.set(String(profile.id), profile);
+    });
+    return [...byId.values()];
+  }
+
+  async function loadAccountProfiles(options = {}) {
+    const fresh = Date.now() - accountProfilesLoadedAt < PERSONAL_EVENTS_CACHE_TTL;
+    if (!options.force && fresh && accountProfilesCache.length) return accountProfilesCache;
+    const local = localAccountProfiles();
+    let remote = [];
+    if (currentUserIsAdmin()) remote = await loadRemoteAccountProfiles();
+    const byId = new Map();
+    [...local, ...remote].forEach((profile) => {
+      if (profile?.id) byId.set(String(profile.id), profile);
+    });
+    accountProfilesCache = [...byId.values()].sort((left, right) => accountLabel(left).localeCompare(accountLabel(right)));
+    accountProfilesLoadedAt = Date.now();
+    updateAccountPickerLabel();
+    return accountProfilesCache;
+  }
+
+  async function loadRemoteAccountProfiles() {
+    const selects = [
+      'id,email,aup_email,full_name,username,account_type,role,organization_name,contact_number,phone_number,mobile_number,contact,phone',
+      'id,email,full_name,username,account_type,role,organization_name,contact_number,phone_number',
+      'id,email,full_name,username,account_type,role,organization_name'
+    ];
+    for (const select of selects) {
+      const rows = await rest(`/rest/v1/profiles?select=${select}&order=full_name.asc&limit=500`, {}, 'return=minimal').catch(() => null);
+      if (Array.isArray(rows)) return rows;
+    }
+    return [];
+  }
+
+  function renderAccountPickerList(filter = '') {
+    const list = document.getElementById('personalAccountPickerList');
+    if (!list) return;
+    const term = normalizedSearchTerm(filter);
+    const rows = accountProfilesCache.filter((profile) => !term || accountSearchText(profile).includes(term));
+    if (!rows.length) {
+      list.innerHTML = '<p class="personal-account-picker__empty">No accounts found.</p>';
+      return;
+    }
+    const selected = String(selectedPersonalAccountId());
+    list.innerHTML = rows.map((profile) => {
+      const id = String(profile.id || '');
+      const label = accountLabel(profile);
+      const meta = accountMeta(profile);
+      return `
+        <button class="personal-account-picker__item" type="button" role="option" aria-selected="${id === selected}" data-personal-account-id="${escapeHtml(id)}">
+          <strong>${escapeHtml(label)}</strong>
+          ${meta ? `<span>${escapeHtml(meta)}</span>` : ''}
+        </button>
+      `;
+    }).join('');
+  }
+
+  async function openAccountPicker() {
+    const modal = ensureAccountPickerModal();
+    const filter = modal.querySelector('#personalAccountPickerFilter');
+    if (filter) filter.value = '';
+    renderAccountPickerList();
+    if (typeof modal.showModal === 'function' && !modal.open) modal.showModal();
+    else modal.setAttribute('open', '');
+    await loadAccountProfiles({ force: !accountProfilesCache.length }).catch((error) => {
+      console.warn('Account picker failed:', error);
+    });
+    renderAccountPickerList();
+    filter?.focus?.({ preventScroll: true });
+  }
+
+  function closeAccountPicker() {
+    const modal = document.getElementById('personalCalendarAccountModal');
+    if (!modal) return;
+    if (typeof modal.close === 'function') modal.close();
+    else modal.removeAttribute('open');
+  }
+
+  async function selectPersonalAccount(id) {
+    const nextId = String(id || currentUserId() || '');
+    if (!nextId) return;
+    activeAccountId = nextId;
+    activeQuery = nextId;
+    updateAccountPickerLabel();
+    closeAccountPicker();
+    await loadEvents(nextId, { force: true }).catch((error) => {
+      renderMessage(error.message || 'Account calendar could not be loaded.');
+    });
+    render();
+  }
+
   function ensurePersonalViewOptions() {
     const view = document.getElementById('viewSelector');
     if (!view) return;
     const currentValue = view.value;
     const optionLabels = {
-      dayGridMonth: 'Month',
-      timeGridWeek: 'Week'
+      dayGridMonth: 'Month'
     };
     view.innerHTML = '';
     Object.entries(optionLabels).forEach(([value, label]) => {
@@ -626,7 +836,7 @@
       option.textContent = label;
       view.appendChild(option);
     });
-    view.value = currentValue === 'timeGridWeek' ? 'timeGridWeek' : 'dayGridMonth';
+    view.value = 'dayGridMonth';
   }
 
   function ensureClassCategory() {
@@ -656,6 +866,7 @@
   function refreshAddonDom() {
     ensureRecurrenceControls();
     ensureHeaderSearch();
+    ensurePersonalBackButton();
     if (personalMode) ensurePersonalViewOptions();
     ensureClassCategory();
     ensureTab();
@@ -848,6 +1059,7 @@
 
   function enterPersonalPerspective() {
     ensureHeaderSearch();
+    ensurePersonalBackButton();
     if (personalMode) return;
     const menu = document.getElementById('mobileMenuButton');
     const view = document.getElementById('viewSelector');
@@ -905,8 +1117,14 @@
   }
 
   function openPersonalCalendar() {
+    if (!activeAccountId) {
+      activeAccountId = currentUserId();
+      activeQuery = activeAccountId;
+    }
     enterPersonalPerspective();
     window.CSC_CLOSE_SIDEBAR?.();
+    void loadAccountProfiles();
+    updateAccountPickerLabel();
     render();
     applyPendingPersonalReloadRestore();
     schedulePersonalCalendarHeightSync();
@@ -1068,22 +1286,22 @@
     }
   }
 
-  async function loadEvents(query = '', options = {}) {
+  async function loadEvents(query = selectedPersonalAccountId(), options = {}) {
     const uid = currentUserId();
     if (!uid) throw new Error('Log in to use your personal calendar.');
-    const normalizedQuery = String(query || '');
+    const normalizedQuery = String(query || uid);
     if (!options.force && eventsLoadedQuery === normalizedQuery && Date.now() - eventsLoadedAt < PERSONAL_EVENTS_CACHE_TTL) {
       return events;
     }
     if (eventsLoadPromise && !options.force && eventsLoadedQuery === normalizedQuery) return eventsLoadPromise;
-    eventsLoadPromise = resolvePersonalSearchProfiles(normalizedQuery).then((profileMatches) => loadPersonalRows(uid, profileMatches, normalizedQuery).then((rows) => {
+    eventsLoadPromise = loadPersonalRows(uid, normalizedQuery).then((rows) => {
       rememberPersonalRows(rows);
-      events = filterPersonalRows(cachedPersonalRows, normalizedQuery, profileMatches);
+      events = filterPersonalRows(cachedPersonalRows, '', { ids: new Set([normalizedQuery]), rows: [profileForAccountId(normalizedQuery)] }, normalizedQuery);
       filteredEvents = events;
       eventsLoadedQuery = normalizedQuery;
       eventsLoadedAt = Date.now();
       return events;
-    })).finally(() => {
+    }).finally(() => {
       eventsLoadPromise = null;
     });
     return eventsLoadPromise;
@@ -1097,59 +1315,24 @@
     cachedPersonalRows = [...byId.values()].sort((a, b) => new Date(a.start_time || 0) - new Date(b.start_time || 0));
   }
 
-  function filterPersonalRows(rows = cachedPersonalRows, query = activeQuery, profileMatches = { ids: new Set(), rows: [] }) {
+  function filterPersonalRows(rows = cachedPersonalRows, query = activeQuery, profileMatches = { ids: new Set(), rows: [] }, ownerId = selectedPersonalAccountId()) {
     const uid = currentUserId();
+    const selectedId = String(ownerId || uid || '');
     const term = normalizedSearchTerm(query);
     return (Array.isArray(rows) ? rows : []).filter((item) => {
       if (item.record_type !== PERSONAL_RECORD_TYPE && item.personal_record_type !== PERSONAL_RECORD_TYPE) return false;
+      if (selectedId) return String(item.created_by || '') === selectedId;
       const own = String(item.created_by || '') === String(uid);
       const matches = !term || profileMatches.ids?.has?.(String(item.created_by || '')) || personalScheduleMatchesProfile(item, profileMatches) || personalScheduleMatches(item, term);
       return (!term && own) || (Boolean(term) && personalScheduleVisibleToViewer(item, profileMatches) && matches);
     });
   }
 
-  async function loadPersonalRows(uid, profileMatches = { ids: new Set(), rows: [] }, query = '') {
+  async function loadPersonalRows(uid, ownerId = uid) {
     const base = `record_type=eq.${PERSONAL_RECORD_TYPE}&select=*&order=start_time.asc`;
-    const profileIds = profileMatches?.ids instanceof Set ? profileMatches.ids : new Set();
-    const profileRows = Array.isArray(profileMatches?.rows) ? profileMatches.rows : [];
-    const term = normalizedSearchTerm(query);
-    const encodedTerm = encodeURIComponent(term);
-    const directSearchFields = ['title', 'personal_owner_name', 'personal_owner_email', 'organization_name', 'venue'];
-    const directSearchQuery = term
-      ? [`${base}&or=(${directSearchFields.map((field) => `${field}.ilike.*${encodedTerm}*`).join(',')})`]
-      : [];
-    const profileValueQueries = profileRows.flatMap((profile) => {
-      const values = [
-        profile.email,
-        profile.full_name,
-        profile.username,
-        profile.organization_name,
-        profile.organizationName,
-        profile.contact_number,
-        profile.phone_number
-      ].map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6);
-      return values.flatMap((value) => {
-        const encoded = encodeURIComponent(value);
-        return [
-          `${base}&personal_owner_email=eq.${encoded}`,
-          `${base}&personal_owner_name=ilike.*${encoded}*`,
-          `${base}&organization_name=ilike.*${encoded}*`
-        ];
-      });
-    });
+    const selectedId = String(ownerId || uid || '');
     const queries = [
-      `${base}&created_by=eq.${encodeURIComponent(uid)}`,
-      `${base}&visibility=eq.public`,
-      ...(currentUserIsAdmin() ? [
-        `${base}&visibility=eq.private`,
-        `${base}&visibility=eq.internal`,
-        `${base}&privacy_level=eq.internal`
-      ] : []),
-      `${base}&privacy_level=eq.basic`,
-      `${base}&privacy_level=eq.public`,
-      ...[...profileIds].filter(Boolean).slice(0, 25).map((id) => `${base}&created_by=eq.${encodeURIComponent(id)}`),
-      ...directSearchQuery,
-      ...profileValueQueries
+      `${base}&created_by=eq.${encodeURIComponent(selectedId || uid)}`
     ];
     const results = await Promise.all(
       queries.map((query) => rest(`/rest/v1/${TABLE}?${query}`, {}, 'return=minimal').catch(() => []))
@@ -1761,9 +1944,9 @@
   }
 
   function searchPublic() {
-    activeQuery = document.getElementById('personalCalendarHeaderSearch')?.value || '';
+    activeQuery = selectedPersonalAccountId();
     const seq = ++searchRequestSeq;
-    filteredEvents = filterPersonalRows(cachedPersonalRows, activeQuery);
+    filteredEvents = filterPersonalRows(cachedPersonalRows, '', { ids: new Set([activeQuery]), rows: [profileForAccountId(activeQuery)] }, activeQuery);
     render();
     if (searchRefreshTimer) window.clearTimeout(searchRefreshTimer);
     searchRefreshTimer = window.setTimeout(async () => {
@@ -2239,13 +2422,30 @@
     }, true);
     document.addEventListener('submit', savePersonalEvent, true);
     document.addEventListener('input', (event) => {
-      if (personalMode && event.target?.id === 'personalCalendarHeaderSearch') void searchPublic();
+      if (personalMode && event.target?.id === 'personalAccountPickerFilter') renderAccountPickerList(event.target.value);
     });
     document.addEventListener('focusin', (event) => {
       if (personalMode && event.target?.id === 'personalCalendarHeaderSearch') expandHeaderSearch();
     });
     document.addEventListener('click', (event) => {
-      if (personalMode && event.target?.id === 'personalCalendarHeaderSearch') expandHeaderSearch();
+      if (!personalMode) return;
+      if (event.target?.id === 'personalCalendarHeaderSearch') {
+        event.preventDefault();
+        event.stopPropagation();
+        expandHeaderSearch();
+        void openAccountPicker();
+        return;
+      }
+      if (event.target.closest?.('[data-account-picker-close]')) {
+        event.preventDefault();
+        closeAccountPicker();
+        return;
+      }
+      const accountButton = event.target.closest?.('[data-personal-account-id]');
+      if (accountButton) {
+        event.preventDefault();
+        void selectPersonalAccount(accountButton.dataset.personalAccountId);
+      }
     }, true);
     document.addEventListener('focusout', (event) => {
       if (personalMode && event.target?.id === 'personalCalendarHeaderSearch') {
@@ -2254,11 +2454,9 @@
     });
     document.addEventListener('keydown', (event) => {
       if (!personalMode || event.target?.id !== 'personalCalendarHeaderSearch') return;
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        void searchPublic();
-        event.target.blur();
-        collapseHeaderSearch();
+        void openAccountPicker();
       } else if (event.key === 'Escape') {
         event.target.blur();
         collapseHeaderSearch();
