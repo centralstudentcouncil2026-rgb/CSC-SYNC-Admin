@@ -1,3 +1,4 @@
+import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule } from "./shared/calendar-blocks.js";
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
 import { renderOrganizerContact, mountOrganizerContacts } from "./shared/organizer-contact.js?v=20261022-dashboard-contact";
 import { normalizeMessengerLink } from "./shared/contact-links.js?v=20261022-messenger";
@@ -48,6 +49,7 @@ const state = {
   loading: false,
   dataLoadError: "",
   hasLoadedData: false,
+  calendarSaving: false,
   bookingsLoading: false,
   bookingsLoadError: "",
   toast: null,
@@ -70,6 +72,7 @@ const state = {
 
 function emptyData() {
   return {
+    calendarBlocks: [],
     accounts: [],
     events: [],
     eventRevisions: [],
@@ -407,7 +410,7 @@ async function loadAdminData(options = {}) {
   state.loading = !silent;
   if (!silent) render();
   try {
-    const [profiles, roles, events, series, occurrences, revisions, concerns, accountRequests, announcements, adminRegistrations] = await Promise.all([
+    const [profiles, roles, events, series, occurrences, revisions, concerns, accountRequests, announcements, adminRegistrations, calendarBlocks] = await Promise.all([
       supabaseRequest("/profiles?select=*&order=organization_name.asc"),
       supabaseRequest("/staff_roles?select=user_id,role"),
       supabaseRequest("/events?select=*&order=created_at.desc"),
@@ -424,6 +427,7 @@ async function loadAdminData(options = {}) {
         state.adminRegistrationLoadError = `Admin signup requests could not be loaded: ${error.message}. If setup is missing, run 026_admin_registration.sql.`;
         return state.data.adminRegistrations;
       }),
+      optionalTable('/calendar_blocks?select=*&order=starts_at.asc'),
     ]);
     const rolesByUser = roleMap(roles);
     const seriesByEvent = Object.fromEntries(series.map((item) => [item.event_id, item]));
@@ -437,6 +441,7 @@ async function loadAdminData(options = {}) {
       return items;
     }, {});
     state.data = {
+      calendarBlocks,
       accounts: state.data.accounts === previousAccounts ? profiles.map((profile) => mapProfile(profile, rolesByUser)) : state.data.accounts,
       events: events.map((event) => mapEvent(event, occurrenceByEvent[event.id], seriesByEvent[event.id], revisionByEvent[event.id], rolesByUser)).filter((event) => event.startsAt && event.endsAt),
       eventRevisions: revisions.map(mapRevision),
@@ -539,95 +544,13 @@ async function conferenceRoomId() {
 
 async function createAdminEvent(formData) {
   requireValidSchedule(formData);
-  const account = currentAdminAccount();
-  const startsAt = `${formData.startDate}T${formData.startTime}:00+08:00`;
-  const endsAt = `${formData.endDate}T${formData.endTime}:00+08:00`;
-  const eventRows = await supabaseRequest("/events", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      owner_account_id: account.id,
-      creator_account_id: account.id,
-      title: formData.title.trim(),
-      category: formData.category,
-      other_category_detail: formData.category === "Others" ? "Admin-created schedule" : "",
-      venue: formData.venue.trim(),
-      visibility: formData.visibility,
-      public_description: formData.publicDescription.trim(),
-      purpose: formData.purpose.trim(),
-      expected_attendees: Number(formData.expectedAttendees || 1),
-      contact_person_snapshot: account.officerName || account.organizationName,
-      contact_number_snapshot: account.phone || "",
-      status: "approved",
-      version: 1,
-    }),
-  });
-  const event = eventRows?.[0];
-  if (!event) throw new Error('The schedule was not saved. Please check database permissions.');
-  await supabaseRequest("/event_series", {
-    method: "POST",
-    body: JSON.stringify({
-      event_id: event.id,
-      timezone: "Asia/Manila",
-      frequency: formData.frequency,
-      recurrence_rule: {},
-      local_start_template: `${formData.startDate}T${formData.startTime}:00`,
-      local_end_template: `${formData.endDate}T${formData.endTime}:00`,
-      repeat_until: formData.frequency === "none" ? null : formData.repeatUntil || null,
-    }),
-  });
-  await supabaseRequest("/event_occurrences", {
-    method: "POST",
-    body: JSON.stringify({
-      event_id: event.id,
-      original_occurrence_key: startsAt,
-      starts_at: startsAt,
-      ends_at: endsAt,
-    }),
-  });
+  await saveCalendarSchedule(supabaseRequest, formData, currentAdminAccount());
 }
-
 async function updateAdminEvent(eventId, formData) {
   requireValidSchedule(formData);
-  const existing = state.data.events.find(event => event.id === eventId);
-  const adminCreated = isAdminCreatedEvent(existing);
-  const startsAt = `${formData.startDate}T${formData.startTime}:00+08:00`;
-  const endsAt = `${formData.endDate}T${formData.endTime}:00+08:00`;
-  const rows = await supabaseRequest(`/events?id=eq.${encodeURIComponent(eventId)}`, {
-    method: "PATCH",
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({
-      ...(adminCreated ? { status: 'approved' } : {}),
-      title: formData.title.trim(),
-      category: formData.category,
-      other_category_detail: formData.category === "Others" ? "Admin-updated schedule" : "",
-      venue: formData.venue.trim(),
-      visibility: formData.visibility,
-      public_description: formData.publicDescription.trim(),
-      purpose: formData.purpose.trim(),
-      expected_attendees: Number(formData.expectedAttendees || 1),
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  if (!rows?.some(row => row.id === eventId)) throw new Error('The schedule changes were not saved. Please check database permissions.');
-  await supabaseRequest(`/event_series?event_id=eq.${encodeURIComponent(eventId)}`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      frequency: formData.frequency,
-      local_start_template: `${formData.startDate}T${formData.startTime}:00`,
-      local_end_template: `${formData.endDate}T${formData.endTime}:00`,
-      repeat_until: formData.frequency === "none" ? null : formData.repeatUntil || null,
-    }),
-  });
-  await supabaseRequest(`/event_occurrences?event_id=eq.${encodeURIComponent(eventId)}`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      original_occurrence_key: startsAt,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      cancelled: false,
-    }),
-  });
+  const original = state.data.events.find(event => event.id === eventId);
+  if (!original) throw new Error('Schedule unavailable.');
+  await saveCalendarSchedule(supabaseRequest, formData, currentAdminAccount(), original);
 }
 
 async function deleteAdminEvent(eventId) {
@@ -1381,6 +1304,7 @@ function eventForm() {
   const account = currentAdminAccount();
   return `
     <form class="stack-form schedule-form ${duration === "multiple" ? "is-multiple" : ""}" data-admin-event-form>
+      ${!editing ? `<label>Entry type<select class="input" name="entryType"><option value="schedule">Create schedule</option><option value="block" ${formDraft.entryType === 'block' ? 'selected' : ''}>Block date / time</option></select></label><label hidden><span><input type="checkbox" name="blockAllDay" ${formDraft.blockAllDay === 'on' ? 'checked' : ''}> All day</span></label><label hidden>Block reason<input class="input" name="blockReason" maxlength="200" value="${escapeHtml(formDraft.blockReason || '')}"></label><p data-block-help hidden>Org users and other admins cannot create or move schedules into this range. You can still schedule here. Existing schedules stay unchanged. Only you can remove your block.</p>` : ''}
       <label>Organization name<input class="input" value="${escapeHtml(account.organizationName || "Central Student Council")}" disabled></label>
       <label>Event title<input class="input" name="title" value="${escapeHtml(formDraft.title ?? editing?.title ?? "")}" required></label>
       <label>Category<select class="input" name="category">${categories.map((item) => `<option ${selectedOption(formDraft.category || editing?.category || "Worship", item)}>${item}</option>`).join("")}</select></label>
@@ -1410,7 +1334,7 @@ function eventForm() {
         <label>Purpose<textarea class="input" name="purpose" required>${escapeHtml(formDraft.purpose ?? editing?.purpose ?? "")}</textarea></label>
       </div>
       <input type="hidden" name="otherCategoryDetail" value="${escapeHtml(formDraft.otherCategoryDetail ?? editing?.otherCategoryDetail ?? "")}">
-      <button class="blue-pill" type="submit">${editing ? "Save Changes" : "Create Approved Schedule"}</button>
+      <button class="blue-pill" type="submit" ${state.calendarSaving ? "disabled" : ""}>${editing ? "Save Changes" : "Create Approved Schedule"}</button>
     </form>
   `;
 }
@@ -1677,6 +1601,7 @@ function render() {
   root.innerHTML = state.session ? renderDashboard() : renderLogin();
   bind();
   mountOrganizerContacts(root, supabaseRequest);
+  bindCalendarBlocks(root, { blocks: state.data.calendarBlocks, accountId: state.session?.accountId, request: supabaseRequest, admin: true, onChange: loadAdminData });
   bindSchedulePopupColors(root);
   mountPersonalRoom(root.querySelector('[data-personal-room]'), {
     accountId: state.session?.accountId, token: state.session?.accessToken,
@@ -2031,12 +1956,18 @@ function bind() {
   bindBookingTimeGuards();
   root.querySelector("[data-admin-event-form]")?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (state.calendarSaving) return;
+    state.calendarSaving = true;
+    event.currentTarget.querySelector("[type=submit]").disabled = true;
     try {
       const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
       if (formData.duration !== "multiple") formData.endDate = formData.startDate;
       const editEventId = state.draft.editEventId;
       if (editEventId) await updateAdminEvent(editEventId, formData);
-      else await createAdminEvent(formData);
+      else if (formData.entryType === 'block') {
+        const rows = await supabaseRequest('/calendar_blocks', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(calendarBlockValues(formData, state.session.accountId)) });
+        if (!rows?.[0]?.id) throw new Error('The block was not saved. Apply 042_calendar_time_blocks.sql if setup is missing.');
+      } else await createAdminEvent(formData);
       state.modal = null;
       state.detailEventId = "";
       state.detailBookingId = "";
@@ -2044,9 +1975,13 @@ function bind() {
       state.detailBookingEndsAt = "";
       state.draft = {};
       await loadAdminData();
-      setToast("success", editEventId ? "Schedule updated." : "Admin schedule created and approved.");
+      setToast("success", editEventId ? "Schedule updated." : formData.entryType === "block" ? "Date/time blocked." : "Admin schedule created and approved.");
     } catch (error) {
       setToast("error", error.message);
+    } finally {
+      state.calendarSaving = false;
+      const submit = root.querySelector("[data-admin-event-form] [type=submit]");
+      if (submit) submit.disabled = false;
     }
   });
   root.querySelector("[data-admin-booking-form]")?.addEventListener("submit", async (event) => {
