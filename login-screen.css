@@ -74,3 +74,9 @@ body:has(.auth-page)::before, body:has(.auth-page)::after, body:has(.login-wrap)
  .auth-page .auth-large-flame, body:has(.login-wrap) .large-flame, body.live-login-page .live-login-flame { margin:6px 0 10px; }
 }
 @media(prefers-reduced-motion:reduce) { html:has(.auth-page), html:has(.login-wrap), html:has(.live-login-page) { scroll-snap-type:none; } }
+
+/* The admin app locks document scrolling; account access needs native page scrolling. */
+@media(max-width:900px) {
+ html:has(.auth-page) { height:auto !important; min-height:100%; overflow-x:hidden !important; overflow-y:auto !important; }
+ body:has(.auth-page) { height:auto !important; overflow-x:clip !important; overflow-y:visible !important; touch-action:pan-y; }
+}
