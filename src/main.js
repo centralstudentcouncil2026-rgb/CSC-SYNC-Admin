@@ -1152,8 +1152,9 @@ function concernsView() {
       <article class="admin-card">
         <span>${escapeHtml(concern.status)}</span>
         <h3>${escapeHtml(concern.title)}</h3>
-        <p>${escapeHtml(owner?.organizationName || "Unknown organization")} · ${escapeHtml(concern.category)}</p>
-        <p>${escapeHtml(concern.description)}</p>
+        <p>${escapeHtml(concern.public_kind ? "Student / public view" : owner?.organizationName || "Unknown organization")} · ${escapeHtml(concern.category)}</p>
+        <p class="concern-description">${escapeHtml(concern.description)}</p>
+        ${concern.public_kind ? `<p><strong>From:</strong> ${escapeHtml(concern.reporter_name || "Anonymous visitor")}</p>${concern.reporter_contact ? `<p class="concern-description"><strong>Contact:</strong> ${escapeHtml(concern.reporter_contact)}</p>` : ""}` : ""}
         <select class="input" data-concern-status="${concern.id}">
           ${["open", "in_progress", "awaiting_response", "resolved"].map((status) => `<option value="${status}" ${concern.status === status ? "selected" : ""}>${status.replaceAll("_", " ")}</option>`).join("")}
         </select>

@@ -24,3 +24,8 @@ The block creator can still create their own schedules in that range. Other admi
 Existing schedules are retained. Only the block creator can remove a block, using **Remove Block** in the schedule form for that date.
 Blocks are visible only to signed-in dashboards. Times use Asia/Manila (UTC+8); touching endpoints are allowed.
 The database checks writes and approvals, and schedule saves are atomic. Rejected drafts remain available for correction.
+
+
+## Public feedback (migration 043)
+
+Apply `database/migrations/043_public_feedback.sql` in the shared Supabase project once. Student View has a responsive About icon and a Concern / Thought / Idea form. Submissions appear in Admin Concerns with optional visitor name and contact details, using the existing progress controls. Anonymous visitors can submit through the RPC but cannot read concerns. Drafts survive reloads; retries reuse a request ID to avoid duplicate submissions. A browser-level one-minute cooldown and a hidden bot field reduce repeated submissions.

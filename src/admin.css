@@ -1734,3 +1734,5 @@ label,
     height: clamp(26px, 7.7vw, 36px);
   }
 }
+
+.concern-description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
