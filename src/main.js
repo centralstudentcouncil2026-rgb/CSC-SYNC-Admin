@@ -1,4 +1,5 @@
-import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule } from "./shared/calendar-blocks.js";
+import "./shared/notices.js?v=20261022-overlay";
+import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule, calendarBlockStrips, renderCalendarBlockStrip, requestCalendarCreation } from "./shared/calendar-blocks.js?v=20261022-block-strips";
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
 import { renderOrganizerContact, mountOrganizerContacts } from "./shared/organizer-contact.js?v=20261022-dashboard-contact";
 import { normalizeMessengerLink } from "./shared/contact-links.js?v=20261022-messenger";
@@ -12,7 +13,7 @@ import { createBookingRefresh } from "./shared/booking-refresh.js";
 import { mountPersonalRoom } from "./shared/personal-room.js?v=20261022-viewer-contacts";
 import { bindSchedulePopupColors } from "./shared/schedule-popups.js";
 import { adjacentMonth, bindScheduleValidation, requireValidSchedule } from "./shared/schedule-controls.js";
-import { monthSegments, renderMonthRows, bindMonthOverflow } from "./shared/calendar-layout.js?v=20261020-fit-strips";
+import { monthSegments, renderMonthRows, bindMonthOverflow } from "./shared/calendar-layout.js?v=20261022-block-strips";
 const SUPABASE_URL = "https://udnyppmvkklcbyylqsxp.supabase.co";
 const SUPABASE_KEY = "sb_publishable_d9-iqfjWlUdXUaj1qfwDag_VUp-wheE";
 const API_URL = `${SUPABASE_URL}/rest/v1`;
@@ -981,7 +982,7 @@ function calendarView() {
   const today = manilaDate(new Date().toISOString());
   const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const rowCount = totalCells / 7;
-  const spanBars = renderMonthRows(monthSegments(events, selected.year, selected.month, startOffset, manilaDate), rowCount, monthSpanBar);
+  const spanBars = renderMonthRows(monthSegments([...events, ...calendarBlockStrips(state.data.calendarBlocks, monthStart, monthEnd)], selected.year, selected.month, startOffset, manilaDate), rowCount, monthSpanBar);
   const cells = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - startOffset + 1;
     const day = dayNumber >= 1 && dayNumber <= daysInMonth ? String(dayNumber) : "";
@@ -1024,7 +1025,7 @@ function miniMonthCalendar(monthName, month, selected, events) {
     const dayEvents = events.filter((event) => manilaDate(event.startsAt) === date);
     const eventTitle = dayEvents.map((event) => `${formatTime(event.startsAt)} ${event.title}`).join("\n");
     return `
-      <span class="mini-day ${dayEvents.length ? "has-events" : ""}" title="${escapeHtml(eventTitle)}">
+      <span class="mini-day ${dayEvents.length ? "has-events" : ""}" data-block-calendar-date="${date}" title="${escapeHtml(eventTitle)}">
         <span class="mini-day-number">${dayNumber}</span>
         ${
           dayEvents.length
@@ -1058,6 +1059,7 @@ function eventColorClass(event) {
 }
 
 function monthSpanBar(event, row, columnStart, columnEnd, lane, rowCount) {
+  if (event.isCalendarBlock) return renderCalendarBlockStrip(event, row, columnStart, columnEnd, lane);
   return renderMainCalendarStrip(event, row, columnStart, columnEnd, lane, rowCount, accountById(event.ownerAccountId), { escapeHtml, formatTime, color: eventColorClass(event) });
 }
 
@@ -1298,8 +1300,8 @@ function eventForm() {
   const formDraft = state.draft.formData || {};
   const date = formDraft.startDate || state.draft.date || inputDate(editing?.startsAt) || state.selectedDate;
   const endDate = formDraft.endDate || state.draft.endDate || inputDate(editing?.endsAt) || date;
-  const startTime = formDraft.startTime || inputTime(editing?.startsAt) || "08:00";
-  const endTime = formDraft.endTime || inputTime(editing?.endsAt) || "09:00";
+  const startTime = formDraft.startTime || inputTime(editing?.startsAt) || state.draft.startTime || "08:00";
+  const endTime = formDraft.endTime || inputTime(editing?.endsAt) || state.draft.endTime || "09:00";
   const frequency = formDraft.frequency || editing?.frequency || "none";
   const duration = formDraft.duration || (date === endDate ? "single" : "multiple");
   const account = currentAdminAccount();
@@ -1793,13 +1795,7 @@ function bind() {
     state.sidePanelOpen = false;
     render();
   }));
-  root.querySelector("[data-open-event-form]")?.addEventListener("click", () => {
-    state.modal = "event";
-    state.detailEventId = "";
-    state.sidePanelOpen = false;
-    state.draft = { date: state.selectedDate, endDate: state.selectedDate };
-    render();
-  });
+  root.querySelector("[data-open-event-form]")?.addEventListener("click", () => openCalendarForm(state.selectedDate));
   root.querySelector("[data-open-booking-form]")?.addEventListener("click", () => {
     state.modal = "booking";
     state.detailEventId = "";
@@ -1877,10 +1873,7 @@ function bind() {
       button.disabled = false;
     }
   }));
-  root.querySelector("[data-day-create]")?.addEventListener("click", () => {
-    state.modal = "event";
-    render();
-  });
+  root.querySelector("[data-day-create]")?.addEventListener("click", () => openCalendarForm(state.dayScheduleDate));
   bindMonthOverflow(root);
   bindScheduleValidation(root.querySelector("[data-admin-event-form]"));
   bindCalendarDateSelection();
@@ -2160,7 +2153,16 @@ function bind() {
   }));
 }
 
+function openCalendarForm(first, last = first) {
+  requestCalendarCreation(state.data.calendarBlocks, { accountId: state.session?.accountId, first, last, onOpen: slot => {
+    state.selectedDate = slot.startDate; state.modal = "event"; state.detailEventId = ""; state.sidePanelOpen = false;
+    state.draft = { date: slot.startDate, endDate: slot.endDate, startTime: slot.startTime, endTime: slot.endTime };
+    render();
+  } });
+}
+
 function openDay(date) {
+  if (!eventOccurrencesBetween(date, date, visibleAdminEvents()).length) { openCalendarForm(date); return; }
   state.dayScheduleDate = date;
   state.selectedDate = date;
   state.draft = { date, endDate: date };
@@ -2201,11 +2203,7 @@ function bindCalendarDateSelection() {
 
   function openRange(start, end) {
     const [from, to] = sortDates(start, end);
-    state.selectedDate = from;
-    state.modal = "event";
-    state.detailEventId = "";
-    state.draft = { date: from, endDate: to };
-    render();
+    openCalendarForm(from, to);
   }
 
   cells.forEach((cell) => {

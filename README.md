@@ -29,3 +29,8 @@ The database checks writes and approvals, and schedule saves are atomic. Rejecte
 ## Public feedback (migration 043)
 
 Apply `database/migrations/043_public_feedback.sql` in the shared Supabase project once. Student View has a responsive About icon and a Concern / Thought / Idea form. Submissions appear in Admin Concerns with optional visitor name and contact details, using the existing progress controls. Anonymous visitors can submit through the RPC but cannot read concerns. Drafts survive reloads; retries reuse a request ID to avoid duplicate submissions. A browser-level one-minute cooldown and a hidden bot field reduce repeated submissions.
+
+
+## Shared notices and blocked dates
+
+Errors use the same dismissible notice card above all open dialogs. In Admin and Org calendars, timed blocks share schedule-strip lanes and all-day blocks shade the date light red. Selecting a blocked date or range shows a notice before opening the form; partially blocked single dates offer an available time. Existing schedules remain viewable, and the block creator retains the existing scheduling exemption. Database migration 042 still enforces conflicts, including recurring schedules. This UI update requires no additional SQL.
