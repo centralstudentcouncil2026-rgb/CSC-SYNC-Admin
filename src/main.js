@@ -1,4 +1,4 @@
-import { renderAuthPage } from "./shared/auth-layout.js?v=20261022-headerless-login";
+import { renderAuthPage } from "./shared/auth-layout.js?v=20261022-admin-logout-officers";
 import "./shared/notices.js?v=20261022-overlay";
 import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule, calendarBlockStrips, renderCalendarBlockStrip, requestCalendarCreation } from "./shared/calendar-blocks.js?v=20261022-block-strips";
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
@@ -1772,7 +1772,7 @@ function bind() {
   }));
 
   root.querySelectorAll("[data-refresh]").forEach((button) => button.addEventListener("click", () => loadAdminData().catch((error) => setToast("error", error.message))));
-  root.querySelectorAll("[data-logout]").forEach((button) => button.addEventListener("click", logout));
+  root.querySelectorAll("[data-logout]").forEach((button) => button.addEventListener("click", () => { logout(); window.location.replace("https://centralstudentcouncil2026-rgb.github.io/CSC-SYNC-Admin/csc-officers.html"); }));
   root.querySelector("[data-toggle-panel]")?.addEventListener("click", () => {
     state.sidePanelOpen = !state.sidePanelOpen;
     render();
@@ -2394,6 +2394,7 @@ async function refreshAdminData(force = false) {
   return adminRefreshInFlight;
 }
 
+if (window.location.hash === "#/login") logout();
 if (state.session) clearFormDraft(LOGIN_DRAFT);
 render();
 if (state.session) loadAdminData().catch((error) => {
