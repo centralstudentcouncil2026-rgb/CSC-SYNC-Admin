@@ -520,7 +520,7 @@ async function createAdminAccount(values) {
     : 'Account created. Confirm your email, then wait for an existing administrator to approve your admin access.';
 }
 
-function logout() {
+function logout(renderLogin = true) {
   clearFormDraft(LOGIN_DRAFT);
   state.loginEmail = '';
   saveSession(null);
@@ -535,7 +535,7 @@ function logout() {
   state.profileSavingId = "";
   state.profileNotices = {};
   state.toast = null;
-  render();
+  if (renderLogin) render();
 }
 
 async function conferenceRoomId() {
@@ -1772,7 +1772,7 @@ function bind() {
   }));
 
   root.querySelectorAll("[data-refresh]").forEach((button) => button.addEventListener("click", () => loadAdminData().catch((error) => setToast("error", error.message))));
-  root.querySelectorAll("[data-logout]").forEach((button) => button.addEventListener("click", () => { logout(); window.location.replace("https://centralstudentcouncil2026-rgb.github.io/CSC-SYNC-Admin/csc-officers.html"); }));
+  root.querySelectorAll("[data-logout]").forEach((button) => button.addEventListener("click", () => { logout(false); window.location.replace("https://centralstudentcouncil2026-rgb.github.io/CSC-SYNC-Admin/csc-officers.html"); }));
   root.querySelector("[data-toggle-panel]")?.addEventListener("click", () => {
     state.sidePanelOpen = !state.sidePanelOpen;
     render();
