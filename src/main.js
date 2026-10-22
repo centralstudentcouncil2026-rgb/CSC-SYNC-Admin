@@ -483,6 +483,7 @@ async function login(formData) {
   const profiles = await supabaseRequest(`/profiles?account_id=eq.${encodeURIComponent(auth.user.id)}&select=*`, { headers });
   if (!profiles?.[0] || profiles[0].active === false) throw new Error('This admin profile is missing or blocked. Contact an existing administrator.');
   saveSession({ accessToken: auth.access_token, refreshToken: auth.refresh_token, accountId: auth.user.id, email });
+  window.CSCAccounts?.remember("sync-admin", email);
   window.CSCIdleSession?.start();
   history.replaceState(history.state, "", location.pathname + location.search);
   clearFormDraft(LOGIN_DRAFT);
@@ -1564,9 +1565,9 @@ function renderLogin() {
           <label>Password<input class="input" name="password" type="password" autocomplete="new-password" minlength="6" required></label>
           <label>Confirm password<input class="input" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required></label>
           <button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Creating account…' : 'Create Admin Account'}</button>
-        </form>` : `<form data-login-form autocomplete="off">
-          <label>Admin account<input class="input" name="userAccount" type="email" value="${escapeHtml(state.loginEmail)}" autocomplete="off" required></label>
-          <label>Password<input class="input" name="password" type="password" autocomplete="current-password" required></label>
+        </form>` : `<form data-login-form data-csc-account-scope="sync-admin" autocomplete="on">
+          <label>Admin account<input class="input" name="userAccount" type="email" value="${escapeHtml(state.loginEmail)}" data-csc-username autocomplete="section-csc-sync-admin username" required></label>
+          <label>Password<input class="input" name="password" type="password" data-csc-password autocomplete="section-csc-sync-admin current-password" required></label>
           <button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Signing in…' : 'Admin Login'}</button>
         </form>`}
         ${state.toast ? `<p class="toast ${state.toast.type}">${escapeHtml(state.toast.message)}</p>` : ""}
