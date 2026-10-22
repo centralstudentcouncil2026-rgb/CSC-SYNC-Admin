@@ -1718,3 +1718,19 @@ label,
   aspect-ratio: 1;
   stroke-width: 2;
 }
+
+/* Use the calendar-tab back control on every Admin tab. */
+.admin-org-header .back-button {
+  width: clamp(38px, 5.6vh, 44px);
+  height: clamp(38px, 5.6vh, 44px);
+  border: 1px solid rgba(17, 24, 39, .12);
+  border-radius: 999px;
+  background: #fff7df;
+  box-shadow: none;
+}
+@media (max-width: 620px) {
+  .admin-org-header .back-button {
+    width: clamp(26px, 7.7vw, 36px);
+    height: clamp(26px, 7.7vw, 36px);
+  }
+}
