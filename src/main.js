@@ -1,7 +1,7 @@
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
 import { renderOrganizerContact, mountOrganizerContacts } from "./shared/organizer-contact.js?v=20261022-dashboard-contact";
 import { normalizeMessengerLink } from "./shared/contact-links.js?v=20261022-messenger";
-import { renderMainCalendarStrip } from "./shared/main-calendar.js?v=20261021-org-strip-label";
+import { calendarScheduleLabel, renderMainCalendarStrip } from "./shared/main-calendar.js?v=20261022-title-first";
 import { CONFERENCE_SLOT_COUNT, renderRoomBookingCard } from "./shared/room-booking-card.js";
 import { captureFormView, captureSidePanelScroll, deferFormRender } from "./shared/form-view.js?v=20261021-panel-scroll";
 import { bindFormDraft, clearFormDraft } from "./shared/form-drafts.js";
@@ -1105,7 +1105,7 @@ function miniMonthCalendar(monthName, month, selected, events) {
         <span class="mini-day-number">${dayNumber}</span>
         ${
           dayEvents.length
-            ? `<span class="mini-event-strips">${dayEvents.slice(0, 2).map((event) => `<i class="${eventColorClass(event)}" data-event-detail="${event.id}" data-event-starts-at="${escapeHtml(event.occurrenceFullStartsAt || event.startsAt)}" data-event-ends-at="${escapeHtml(event.occurrenceFullEndsAt || event.endsAt)}">${formatTime(event.startsAt)} ${escapeHtml(event.title)}</i>`).join("")}${dayEvents.length > 2 ? "<em>+</em>" : ""}</span>`
+            ? `<span class="mini-event-strips">${dayEvents.slice(0, 2).map((event) => `<i class="${eventColorClass(event)}" data-event-detail="${event.id}" data-event-starts-at="${escapeHtml(event.occurrenceFullStartsAt || event.startsAt)}" data-event-ends-at="${escapeHtml(event.occurrenceFullEndsAt || event.endsAt)}" title="${escapeHtml(calendarScheduleLabel(event, accountById(event.ownerAccountId)))}">${escapeHtml(calendarScheduleLabel(event, accountById(event.ownerAccountId)))}</i>`).join("")}${dayEvents.length > 2 ? "<em>+</em>" : ""}</span>`
             : ""
         }
       </span>
@@ -1123,7 +1123,7 @@ function miniMonthCalendar(monthName, month, selected, events) {
 function eventChip(event) {
   const owner = accountById(event.ownerAccountId);
   const status = event.hasPendingRevision ? "edit pending" : event.status;
-  return `<button class="event-chip ${eventColorClass(event)}" data-event-detail="${event.id}" data-event-starts-at="${escapeHtml(event.occurrenceFullStartsAt || event.startsAt)}" data-event-ends-at="${escapeHtml(event.occurrenceFullEndsAt || event.endsAt)}" type="button">${formatTime(event.startsAt)} · ${escapeHtml(event.title)} <em>${escapeHtml(owner?.organizationName || "")} · ${escapeHtml(status)}</em></button>`;
+  return `<button class="event-chip ${eventColorClass(event)}" data-event-detail="${event.id}" data-event-starts-at="${escapeHtml(event.occurrenceFullStartsAt || event.startsAt)}" data-event-ends-at="${escapeHtml(event.occurrenceFullEndsAt || event.endsAt)}" type="button">${escapeHtml(calendarScheduleLabel(event, owner))} <em>${formatTime(event.startsAt)} · ${escapeHtml(status)}</em></button>`;
 }
 
 function eventColorClass(event) {
