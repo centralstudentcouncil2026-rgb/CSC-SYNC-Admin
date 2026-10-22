@@ -1566,8 +1566,8 @@ function renderLogin() {
           <label>Confirm password<input class="input" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required></label>
           <button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Creating account…' : 'Create Admin Account'}</button>
         </form>` : `<form data-login-form data-csc-account-scope="sync-admin" autocomplete="on">
-          <label>Admin account<input class="input" name="userAccount" type="email" value="${escapeHtml(state.loginEmail)}" data-csc-username autocomplete="section-csc-sync-admin username" required></label>
-          <label>Password<input class="input" name="password" type="password" data-csc-password autocomplete="section-csc-sync-admin current-password" required></label>
+          <div class="login-fields"><label>Admin account<input class="input" name="userAccount" type="email" value="${escapeHtml(state.loginEmail)}" data-csc-username autocomplete="section-csc-sync-admin username" required></label>
+          <label>Password<input class="input" name="password" type="password" data-csc-password autocomplete="section-csc-sync-admin current-password" required></label></div>
           <button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Signing in…' : 'Admin Login'}</button>
         </form>`}
         ${state.toast ? `<p class="toast ${state.toast.type}">${escapeHtml(state.toast.message)}</p>` : ""}
