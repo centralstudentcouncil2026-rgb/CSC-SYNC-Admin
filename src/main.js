@@ -1,4 +1,4 @@
-import { renderAuthPage } from "./shared/auth-layout.js?v=20261022-portrait";
+import { renderAuthPage } from "./shared/auth-layout.js?v=20261022-two-rows";
 import "./shared/notices.js?v=20261022-overlay";
 import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule, calendarBlockStrips, renderCalendarBlockStrip, requestCalendarCreation } from "./shared/calendar-blocks.js?v=20261022-block-strips";
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
