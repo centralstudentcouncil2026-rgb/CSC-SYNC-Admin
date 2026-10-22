@@ -1568,10 +1568,11 @@ function renderLogin() {
         </form>` : `<form data-login-form data-csc-account-scope="sync-admin" autocomplete="on">
           <div class="login-fields"><label>Admin account<input class="input" name="userAccount" type="email" value="${escapeHtml(state.loginEmail)}" data-csc-username autocomplete="section-csc-sync-admin username" required></label>
           <label>Password<input class="input" name="password" type="password" data-csc-password autocomplete="section-csc-sync-admin current-password" required></label></div>
-          <button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Signing in…' : 'Admin Login'}</button>
+          <p class="login-inline-error" role="alert">${state.toast?.type === "error" ? escapeHtml(state.toast.message) : ""}</p>
+          <div class="login-actions"><button class="blue-pill" type="submit" ${state.authSubmitting ? 'disabled' : ''}>${state.authSubmitting ? 'Signing in…' : 'Admin Login'}</button><button class="white-pill" type="button" data-admin-auth-view="signup" ${state.authSubmitting ? "disabled" : ""}>Create Admin Account</button></div>
         </form>`}
-        ${state.toast ? `<p class="toast ${state.toast.type}">${escapeHtml(state.toast.message)}</p>` : ""}
-        <button class="white-pill" type="button" data-admin-auth-view="${signup ? 'login' : 'signup'}" ${state.authSubmitting ? 'disabled' : ''}>${signup ? 'Back to Login' : 'Create Admin Account'}</button>
+        ${signup && state.toast ? `<p class="toast ${state.toast.type}">${escapeHtml(state.toast.message)}</p>` : ""}
+        ${signup ? `<button class="white-pill" type="button" data-admin-auth-view="login" ${state.authSubmitting ? 'disabled' : ''}>Back to Login</button>` : ""}
   ` });
 }
 
