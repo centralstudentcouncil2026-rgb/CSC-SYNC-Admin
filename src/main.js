@@ -483,6 +483,8 @@ async function login(formData) {
   const profiles = await supabaseRequest(`/profiles?account_id=eq.${encodeURIComponent(auth.user.id)}&select=*`, { headers });
   if (!profiles?.[0] || profiles[0].active === false) throw new Error('This admin profile is missing or blocked. Contact an existing administrator.');
   saveSession({ accessToken: auth.access_token, refreshToken: auth.refresh_token, accountId: auth.user.id, email });
+  window.CSCIdleSession?.start();
+  history.replaceState(history.state, "", location.pathname + location.search);
   clearFormDraft(LOGIN_DRAFT);
   state.loginEmail = '';
   state.sidePanelOpen = false;
@@ -2394,7 +2396,7 @@ async function refreshAdminData(force = false) {
   return adminRefreshInFlight;
 }
 
-if (window.location.hash === "#/login") logout();
+if (window.location.hash === "#/login" && performance.getEntriesByType("navigation")[0]?.type !== "reload") logout();
 if (state.session) clearFormDraft(LOGIN_DRAFT);
 render();
 if (state.session) loadAdminData().catch((error) => {
