@@ -1,3 +1,4 @@
+import { renderAuthPage } from "./shared/auth-layout.js?v=20261022-trace-login";
 import "./shared/notices.js?v=20261022-overlay";
 import { bindCalendarBlocks, calendarBlockValues, saveCalendarSchedule, calendarBlockStrips, renderCalendarBlockStrip, requestCalendarCreation } from "./shared/calendar-blocks.js?v=20261022-block-strips";
 import { calendarOrganizationOptions, matchesCalendarOrganization } from "./shared/calendar-organization-filter.js";
@@ -1551,12 +1552,7 @@ function sidePanel() {
 function renderLogin() {
   const signup = state.authView === 'signup';
   const draft = state.adminSignupDraft;
-  return `
-    <main class="admin-login">
-      <section class="login-card ${signup ? 'admin-signup-card' : ''}">
-        <img src="./src/assets/csc-logo.png" alt="CSC S.Y.N.C. logo">
-        <h1>${signup ? 'Create Admin Account' : 'CSC SYNC Admin'}</h1>
-        <p>${signup ? 'Create your CSC Council account. An existing administrator must approve your admin access.' : 'Sign in with your administrator account.'}</p>
+  return renderAuthPage({ admin: true, signup, assetBase: './src/assets/', content: `
         ${signup ? `<form data-admin-signup-form>
           <label>Officer name<input class="input" name="officerName" autocomplete="name" value="${escapeHtml(draft.officerName || '')}" required></label>
           <label>User account<input class="input" name="userAccount" type="email" autocomplete="username" value="${escapeHtml(draft.userAccount || '')}" required></label>
@@ -1573,9 +1569,7 @@ function renderLogin() {
         </form>`}
         ${state.toast ? `<p class="toast ${state.toast.type}">${escapeHtml(state.toast.message)}</p>` : ""}
         <button class="white-pill" type="button" data-admin-auth-view="${signup ? 'login' : 'signup'}" ${state.authSubmitting ? 'disabled' : ''}>${signup ? 'Back to Login' : 'Create Admin Account'}</button>
-      </section>
-    </main>
-  `;
+  ` });
 }
 
 function renderDashboard() {
